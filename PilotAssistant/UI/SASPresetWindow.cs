@@ -36,7 +36,7 @@ namespace PilotAssistant.UI
         {
             // Start a text field group.
             GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
-            if (SurfSAS.IsSSASMode())
+            if (SurfSAS.Instance.IsSSASMode())
                 DrawSurfPreset();
             else
                 DrawStockPreset();
@@ -44,15 +44,15 @@ namespace PilotAssistant.UI
 
         private static void DrawSurfPreset()
         {
-            if (PresetManager.GetActiveSASPreset() != null)
+            if (PresetManager.Instance.GetActiveSASPreset() != null)
             {
-                SASPreset p = PresetManager.GetActiveSASPreset();
+                SASPreset p = PresetManager.Instance.GetActiveSASPreset();
                 GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.BoldLabelStyle);
-                if (p != PresetManager.GetDefaultSASTuning())
+                if (p != PresetManager.Instance.GetDefaultSASTuning())
                 {
                     if (GUILayout.Button("Update Preset", GeneralUI.ButtonStyle))
                     {
-                        SurfSAS.UpdatePreset();
+                        SurfSAS.Instance.UpdatePreset();
                     }
                 }
             }
@@ -62,7 +62,7 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GeneralUI.ButtonStyle, GUILayout.Width(25)))
             {
-                SurfSAS.RegisterNewPreset(newPresetName);
+                SurfSAS.Instance.RegisterNewPreset(newPresetName);
                 newPresetName = "";
             }
             GUILayout.EndHorizontal();
@@ -72,20 +72,20 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default", GeneralUI.ButtonStyle))
             {
-                SurfSAS.LoadPreset(PresetManager.GetDefaultSASTuning());
+                SurfSAS.Instance.LoadPreset(PresetManager.Instance.GetDefaultSASTuning());
             }
 
-            List<SASPreset> allPresets = PresetManager.GetAllSASPresets();
+            List<SASPreset> allPresets = PresetManager.Instance.GetAllSASPresets();
             foreach (SASPreset p in allPresets)
             {
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.GetName(), GeneralUI.ButtonStyle))
                 {
-                    SurfSAS.LoadPreset(p);
+                    SurfSAS.Instance.LoadPreset(p);
                 }
                 if (GUILayout.Button("x", GeneralUI.ButtonStyle, GUILayout.Width(25)))
                 {
-                    PresetManager.RemovePreset(p);
+                    PresetManager.Instance.RemovePreset(p);
                 }
                 GUILayout.EndHorizontal();
             }
@@ -97,15 +97,15 @@ namespace PilotAssistant.UI
 
         private static void DrawStockPreset()
         {
-            if (PresetManager.GetActiveStockSASPreset() != null)
+            if (PresetManager.Instance.GetActiveStockSASPreset() != null)
             {
-                SASPreset p = PresetManager.GetActiveStockSASPreset();
+                SASPreset p = PresetManager.Instance.GetActiveStockSASPreset();
                 GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.BoldLabelStyle);
-                if (p != PresetManager.GetDefaultStockSASTuning())
+                if (p != PresetManager.Instance.GetDefaultStockSASTuning())
                 {
                     if (GUILayout.Button("Update Preset", GeneralUI.ButtonStyle))
                     {
-                        SurfSAS.UpdateStockPreset();
+                        SurfSAS.Instance.UpdateStockPreset();
                     }
                 }
             }
@@ -115,7 +115,7 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GeneralUI.ButtonStyle, GUILayout.Width(25)))
             {
-                SurfSAS.RegisterNewStockPreset(newPresetName);
+                SurfSAS.Instance.RegisterNewStockPreset(newPresetName);
                 newPresetName = "";
             }
             GUILayout.EndHorizontal();
@@ -125,20 +125,20 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default", GeneralUI.ButtonStyle))
             {
-                SurfSAS.LoadStockPreset(PresetManager.GetDefaultStockSASTuning());
+                SurfSAS.Instance.LoadStockPreset(PresetManager.Instance.GetDefaultStockSASTuning());
             }
 
-            List<SASPreset> allStockPresets = PresetManager.GetAllStockSASPresets();
+            List<SASPreset> allStockPresets = PresetManager.Instance.GetAllStockSASPresets();
             foreach (SASPreset p in allStockPresets)
             {
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.GetName(), GeneralUI.ButtonStyle))
                 {
-                    SurfSAS.LoadStockPreset(p);
+                    SurfSAS.Instance.LoadStockPreset(p);
                 }
                 if (GUILayout.Button("x", GeneralUI.ButtonStyle, GUILayout.Width(25)))
                 {
-                    PresetManager.RemovePreset(p);
+                    PresetManager.Instance.RemovePreset(p);
                 }
                 GUILayout.EndHorizontal();
             }

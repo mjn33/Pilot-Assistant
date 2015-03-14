@@ -41,8 +41,8 @@ namespace PilotAssistant.UI
             // Start a text field group.
             GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
             
-            bool isOperational = SurfSAS.IsSSASOperational() || SurfSAS.IsStockSASOperational();
-            bool isSSASMode = SurfSAS.IsSSASMode();
+            bool isOperational = SurfSAS.Instance.IsSSASOperational() || SurfSAS.Instance.IsStockSASOperational();
+            bool isSSASMode = SurfSAS.Instance.IsSSASMode();
             GUILayout.BeginHorizontal();
             showPresets = GUILayout.Toggle(showPresets, "Presets", GeneralUI.ToggleButtonStyle);
             GUILayout.EndHorizontal();
@@ -52,7 +52,7 @@ namespace PilotAssistant.UI
             GUILayout.BeginHorizontal();
             if (GUILayout.Toggle(isOperational, isOperational ? "On" : "Off", GeneralUI.ToggleButtonStyle, GUILayout.ExpandWidth(false)) != isOperational)
             {
-                SurfSAS.ToggleOperational();
+                SurfSAS.Instance.ToggleOperational();
             }
             GUILayout.Label("SAS", GeneralUI.BoldLabelStyle, GUILayout.ExpandWidth(true));
             GUILayout.EndHorizontal();
@@ -62,25 +62,25 @@ namespace PilotAssistant.UI
             bool tmpToggle2 = GUILayout.Toggle(isSSASMode, "SSAS", GeneralUI.ToggleButtonStyle);
             // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
             if (tmpToggle1 && tmpToggle2)
-                SurfSAS.ToggleSSASMode();
+                SurfSAS.Instance.ToggleSSASMode();
             
             GUILayout.EndHorizontal();
 
             if (isSSASMode)
             {
-                double pitch = SurfSAS.GetController(SASList.Pitch).SetPoint;
-                double roll = SurfSAS.GetController(SASList.Roll).SetPoint;
-                double hdg = SurfSAS.GetController(SASList.Yaw).SetPoint;
+                double pitch = SurfSAS.Instance.GetController(SASList.Pitch).SetPoint;
+                double roll = SurfSAS.Instance.GetController(SASList.Roll).SetPoint;
+                double hdg = SurfSAS.Instance.GetController(SASList.Yaw).SetPoint;
 
-                bool tmp1 = SurfSAS.IsSSASAxisEnabled(SASList.Pitch);
-                bool tmp2 = SurfSAS.IsSSASAxisEnabled(SASList.Roll);
-                bool tmp3 = SurfSAS.IsSSASAxisEnabled(SASList.Yaw);
-                SurfSAS.GetController(SASList.Pitch).SetPoint = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Pitch:", ref tmp1, pitch, 80, 60, 80, -80);
-                SurfSAS.GetController(SASList.Roll).SetPoint = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Roll:", ref tmp2, roll, 80, 60, 180, -180);
-                SurfSAS.GetController(SASList.Yaw).SetPoint = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Heading:", ref tmp3, hdg, 80, 60, 360, 0);
-                SurfSAS.SetSSASAxisEnabled(SASList.Pitch, tmp1);
-                SurfSAS.SetSSASAxisEnabled(SASList.Roll, tmp2);
-                SurfSAS.SetSSASAxisEnabled(SASList.Yaw, tmp3);
+                bool tmp1 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Pitch);
+                bool tmp2 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Roll);
+                bool tmp3 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Yaw);
+                SurfSAS.Instance.GetController(SASList.Pitch).SetPoint = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Pitch:", ref tmp1, pitch, 80, 60, 80, -80);
+                SurfSAS.Instance.GetController(SASList.Roll).SetPoint = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Roll:", ref tmp2, roll, 80, 60, 180, -180);
+                SurfSAS.Instance.GetController(SASList.Yaw).SetPoint = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Heading:", ref tmp3, hdg, 80, 60, 360, 0);
+                SurfSAS.Instance.SetSSASAxisEnabled(SASList.Pitch, tmp1);
+                SurfSAS.Instance.SetSSASAxisEnabled(SASList.Roll, tmp2);
+                SurfSAS.Instance.SetSSASAxisEnabled(SASList.Yaw, tmp3);
 
                 DrawPIDValues(SASList.Pitch, "Pitch");
                 DrawPIDValues(SASList.Roll, "Roll");
@@ -88,7 +88,7 @@ namespace PilotAssistant.UI
             }
             else
             {
-                FlightData flightData = SurfSAS.GetFlightData();
+                FlightData flightData = SurfSAS.Instance.GetFlightData();
                 VesselAutopilot.VesselSAS sas = flightData.Vessel.Autopilot.SAS;
 
                 DrawPIDValues(sas.pidLockedPitch, "Pitch", SASList.Pitch);
@@ -105,7 +105,7 @@ namespace PilotAssistant.UI
 
         private static void DrawPIDValues(SASList controllerID, string inputName)
         {
-            PID.PID_Controller controller = SurfSAS.GetController(controllerID);
+            PID.PID_Controller controller = SurfSAS.Instance.GetController(controllerID);
             if (GUILayout.Button(inputName, GeneralUI.ButtonStyle, GUILayout.ExpandWidth(true)))
                 ssasPIDDisplay[(int)controllerID] = !ssasPIDDisplay[(int)controllerID]; 
 

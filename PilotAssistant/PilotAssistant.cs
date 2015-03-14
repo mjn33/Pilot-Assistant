@@ -24,20 +24,32 @@ namespace PilotAssistant
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     class PilotAssistant : MonoBehaviour
     {
-        private static FlightData flightData;
-        private static PID_Controller[] controllers = new PID_Controller[7];
+        // Singleton pattern, as opposed to using semi-static classes
+        private static PilotAssistant instance;
+        public static PilotAssistant Instance
+        {
+            get { return instance; }
+        }
+
+        private FlightData flightData;
+        private PID_Controller[] controllers = new PID_Controller[7];
 
         // Whether PA has been paused by the user, does not account for SAS being turned on.
-        // Use SurfSAS.CheckSAS() as well. 
-        private static bool isPaused = false;
+        // Use SurfSAS.Instance.CheckSAS() as well.
+        private bool isPaused = false;
         // RollController
-        private static bool isHdgActive = false;
+        private bool isHdgActive = false;
         // PitchController
-        private static bool isVertActive = false;
+        private bool isVertActive = false;
         // Altitude / vertical speed
-        private static bool isAltitudeHoldActive = false;
+        private bool isAltitudeHoldActive = false;
         // Wing leveller / Heading control
-        private static bool isWingLvlActive = false;
+        private bool isWingLvlActive = false;
+
+        public void Awake()
+        {
+            instance = this;
+        }
 
         public void Start()
         {
@@ -62,7 +74,7 @@ namespace PilotAssistant
             altitudeToClimbRate.InMin = 0;
 
             // Set up a default preset that can be easily returned to
-            PresetManager.InitDefaultPATuning(controllers);
+            PresetManager.Instance.InitDefaultPATuning(controllers);
 
             // register vessel
             flightData = new FlightData(FlightGlobals.ActiveVessel);
@@ -72,7 +84,7 @@ namespace PilotAssistant
             RenderingManager.AddToPostDrawQueue(5, DrawGUI);
         }
 
-        public static PID_Controller GetController(PIDList id)
+        public PID_Controller GetController(PIDList id)
         {
             // Make accessing controllers a bit cleaner
             return controllers[(int)id];
@@ -89,7 +101,7 @@ namespace PilotAssistant
         {
             RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
             GameEvents.onVesselChange.Remove(VesselSwitch);
-            PresetManager.SavePresetsToFile();
+            PresetManager.Instance.SavePresetsToFile();
             isHdgActive = false;
             isVertActive = false;
 
@@ -109,13 +121,13 @@ namespace PilotAssistant
             PAMainWindow.Draw(AppLauncher.AppLauncherInstance.bDisplayAssistant);
         }
 
-        private static void VesselController(FlightCtrlState state)
+        private void VesselController(FlightCtrlState state)
         {
             flightData.UpdateAttitude();
 
             if (isPaused || SASCheck())
                 return;
-            
+
             // Heading Control
             if (isHdgActive)
             {
@@ -159,47 +171,47 @@ namespace PilotAssistant
             }
         }
 
-        public static FlightData GetFlightData() { return flightData; } 
-        public static bool IsPaused() { return isPaused || SASCheck(); }
-        public static bool IsHdgActive() { return isHdgActive; }
-        public static bool IsWingLvlActive() { return isWingLvlActive; }
-        public static bool IsVertActive() { return isVertActive; }
-        public static bool IsAltitudeHoldActive() { return isAltitudeHoldActive; }
-        
-        public static void SetHdgActive()
+        public FlightData GetFlightData() { return flightData; }
+        public bool IsPaused() { return isPaused || SASCheck(); }
+        public bool IsHdgActive() { return isHdgActive; }
+        public bool IsWingLvlActive() { return isWingLvlActive; }
+        public bool IsVertActive() { return isVertActive; }
+        public bool IsAltitudeHoldActive() { return isAltitudeHoldActive; }
+
+        public void SetHdgActive()
         {
             // Set heading control on, use values in GUI
             double newHdg = PAMainWindow.GetTargetHeading();
             GetController(PIDList.HdgBank).SetPoint = newHdg;
             GetController(PIDList.HdgYaw).SetPoint = newHdg;
             isHdgActive = true;
-            SurfSAS.SetOperational(false);
+            SurfSAS.Instance.SetOperational(false);
             isPaused = false;
         }
-        
-        public static void SetVertSpeedActive()
+
+        public void SetVertSpeedActive()
         {
             // Set vertical control on, use vertical speed value in GUI
             double newSpd = PAMainWindow.GetTargetVerticalSpeed();
             GetController(PIDList.VertSpeed).SetPoint = newSpd;
             isVertActive = true;
             isAltitudeHoldActive = false;
-            SurfSAS.SetOperational(false);
+            SurfSAS.Instance.SetOperational(false);
             isPaused = false;
         }
-        
-        public static void SetAltitudeHoldActive()
+
+        public void SetAltitudeHoldActive()
         {
             // Set vertical control on, use altitude value in GUI
             double newAlt = PAMainWindow.GetTargetAltitude();
             GetController(PIDList.Altitude).SetPoint = newAlt;
             isVertActive = true;
             isAltitudeHoldActive = true;
-            SurfSAS.SetOperational(false);
+            SurfSAS.Instance.SetOperational(false);
             isPaused = false;
         }
-        
-        public static void ToggleHdg()
+
+        public void ToggleHdg()
         {
             isHdgActive = !isHdgActive;
             if (isHdgActive)
@@ -208,7 +220,7 @@ namespace PilotAssistant
                 GetController(PIDList.HdgBank).SetPoint = flightData.Heading;
                 GetController(PIDList.HdgYaw).SetPoint = flightData.Heading; // added
                 PAMainWindow.SetTargetHeading(flightData.Heading);
-                SurfSAS.SetOperational(false);
+                SurfSAS.Instance.SetOperational(false);
                 isPaused = false;
             }
             else
@@ -220,8 +232,8 @@ namespace PilotAssistant
                 GetController(PIDList.Rudder).Clear();
             }
         }
-        
-        public static void ToggleWingLvl()
+
+        public void ToggleWingLvl()
         {
             isWingLvlActive = !isWingLvlActive;
             if (!isWingLvlActive)
@@ -230,8 +242,8 @@ namespace PilotAssistant
                 GetController(PIDList.HdgYaw).SetPoint = flightData.Heading;
             }
         }
-        
-        public static void ToggleVert()
+
+        public void ToggleVert()
         {
             isVertActive = !isVertActive;
             if (isVertActive)
@@ -246,7 +258,7 @@ namespace PilotAssistant
                     GetController(PIDList.VertSpeed).SetPoint = flightData.Vessel.verticalSpeed;
                     PAMainWindow.SetTargetVerticalSpeed(flightData.Vessel.verticalSpeed);
                 }
-                SurfSAS.SetOperational(false);
+                SurfSAS.Instance.SetOperational(false);
                 isPaused = false;
             }
             else
@@ -257,8 +269,8 @@ namespace PilotAssistant
                 GetController(PIDList.Elevator).Clear();
             }
         }
-        
-        public static void ToggleAltitudeHold()
+
+        public void ToggleAltitudeHold()
         {
             isAltitudeHoldActive = !isAltitudeHoldActive;
             if (isAltitudeHoldActive)
@@ -273,30 +285,31 @@ namespace PilotAssistant
             }
         }
 
-        public static void UpdatePreset()
+        public void UpdatePreset()
         {
-            PAPreset p = PresetManager.GetActivePAPreset();
+            PAPreset p = PresetManager.Instance.GetActivePAPreset();
             if (p != null)
                 p.Update(controllers);
-            PresetManager.SavePresetsToFile();
-        }
-        
-        public static void RegisterNewPreset(string name)
-        {
-            PresetManager.RegisterPAPreset(controllers, name);
-        }
-        
-        public static void LoadPreset(PAPreset p)
-        {
-            PresetManager.LoadPAPreset(controllers, p);
+            PresetManager.Instance.SavePresetsToFile();
         }
 
-        private static bool SASCheck()
+        public void RegisterNewPreset(string name)
         {
-            return SurfSAS.IsSSASOperational() || SurfSAS.IsStockSASOperational();
+            PresetManager.Instance.RegisterPAPreset(controllers, name);
         }
 
-        private static void KeyPressChanges()
+        public void LoadPreset(PAPreset p)
+        {
+            PresetManager.Instance.LoadPAPreset(controllers, p);
+        }
+
+        private bool SASCheck()
+        {
+            return SurfSAS.Instance.IsSSASOperational() ||
+                   SurfSAS.Instance.IsStockSASOperational();
+        }
+
+        private void KeyPressChanges()
         {
             // Respect current input locks
             if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))
@@ -310,7 +323,7 @@ namespace PilotAssistant
                 if ((IsHdgActive() || IsVertActive()) && (isPaused || SASCheck()))
                 {
                     isPaused = false;
-                    SurfSAS.SetOperational(false);
+                    SurfSAS.Instance.SetOperational(false);
                     Messaging.PostMessage("Pilot assistant unpaused.");
                 }
                 // Otherwise, when active and not paused, pause.
@@ -331,10 +344,10 @@ namespace PilotAssistant
                     Messaging.PostMessage("Pilot Assistant control retrieved from SAS.");
             }
 
-            // Level wings and set vertical speed to 0. 
+            // Level wings and set vertical speed to 0.
             if (mod && Input.GetKeyDown(KeyCode.X))
             {
-                // Set controller and modes. 
+                // Set controller and modes.
                 GetController(PIDList.VertSpeed).SetPoint = 0;
                 isVertActive = true;
                 isAltitudeHoldActive = false;
@@ -342,9 +355,9 @@ namespace PilotAssistant
                 isWingLvlActive = true;
                 // Update GUI
                 PAMainWindow.SetTargetVerticalSpeed(0.0);
-                // Make sure we are not paused and SAS is off. 
+                // Make sure we are not paused and SAS is off.
                 isPaused = false;
-                SurfSAS.SetOperational(false);
+                SurfSAS.Instance.SetOperational(false);
                 Messaging.PostMessage("Pilot Assistant is levelling off.");
             }
 

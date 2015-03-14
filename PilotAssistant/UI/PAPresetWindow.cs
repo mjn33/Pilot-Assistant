@@ -39,15 +39,15 @@ namespace PilotAssistant.UI
             // Start a text field group.
             GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
             
-            if (PresetManager.GetActivePAPreset() != null)
+            if (PresetManager.Instance.GetActivePAPreset() != null)
             {
-                PAPreset p = PresetManager.GetActivePAPreset();
+                PAPreset p = PresetManager.Instance.GetActivePAPreset();
                 GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.BoldLabelStyle);
-                if (p != PresetManager.GetDefaultPATuning())
+                if (p != PresetManager.Instance.GetDefaultPATuning())
                 {
                     if (GUILayout.Button("Update Preset", GeneralUI.ButtonStyle))
                     {
-                        PilotAssistant.UpdatePreset();
+                        PilotAssistant.Instance.UpdatePreset();
                     }
                 }
             }
@@ -57,7 +57,7 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GeneralUI.ButtonStyle, GUILayout.Width(25)))
             {
-                PilotAssistant.RegisterNewPreset(newPresetName);
+                PilotAssistant.Instance.RegisterNewPreset(newPresetName);
                 newPresetName = "";
             }
             GUILayout.EndHorizontal();
@@ -67,20 +67,20 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default", GeneralUI.ButtonStyle))
             {
-                PilotAssistant.LoadPreset(PresetManager.GetDefaultPATuning());
+                PilotAssistant.Instance.LoadPreset(PresetManager.Instance.GetDefaultPATuning());
             }
 
-            List<PAPreset> allPresets = PresetManager.GetAllPAPresets();
+            List<PAPreset> allPresets = PresetManager.Instance.GetAllPAPresets();
             foreach (PAPreset p in allPresets)
             {
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.GetName(), GeneralUI.ButtonStyle))
                 {
-                    PilotAssistant.LoadPreset(p);
+                    PilotAssistant.Instance.LoadPreset(p);
                 }
                 if (GUILayout.Button("x", GeneralUI.ButtonStyle, GUILayout.Width(25)))
                 {
-                    PresetManager.RemovePreset(p);
+                    PresetManager.Instance.RemovePreset(p);
                 }
                 GUILayout.EndHorizontal();
             }

@@ -12,15 +12,27 @@ namespace PilotAssistant.Presets
     [KSPAddon(KSPAddon.Startup.MainMenu, true)]
     public class PresetManager : MonoBehaviour
     {
-        private static PAPreset defaultPATuning = null;
-        private static List<PAPreset> PAPresetList = new List<PAPreset>();
-        private static PAPreset activePAPreset = null;
+        // Singleton pattern, as opposed to using semi-static classes
+        private static PresetManager instance;
+        public static PresetManager Instance
+        {
+            get { return instance; }
+        }
 
-        private static SASPreset defaultSASTuning;
-        private static SASPreset defaultStockSASTuning;
-        private static List<SASPreset> SASPresetList = new List<SASPreset>();
-        private static SASPreset activeSASPreset = null;
-        private static SASPreset activeStockSASPreset = null;
+        private PAPreset defaultPATuning = null;
+        private List<PAPreset> paPresetList = new List<PAPreset>();
+        private PAPreset activePAPreset = null;
+
+        private SASPreset defaultSASTuning;
+        private SASPreset defaultStockSASTuning;
+        private List<SASPreset> sasPresetList = new List<SASPreset>();
+        private SASPreset activeSASPreset = null;
+        private SASPreset activeStockSASPreset = null;
+
+        public void Awake()
+        {
+            instance = this;
+        }
 
         public void Start()
         {
@@ -33,15 +45,15 @@ namespace PilotAssistant.Presets
             SavePresetsToFile();
         }
 
-        private static void LoadPresetsFromFile()
+        private void LoadPresetsFromFile()
         {
-            PAPresetList.Clear();
+            paPresetList.Clear();
             foreach (ConfigNode node in GameDatabase.Instance.GetConfigNodes("PAPreset"))
             {
                 if (node == null)
                     continue;
 
-                PAPresetList.Add(new PAPreset(node));
+                paPresetList.Add(new PAPreset(node));
             }
 
             foreach (ConfigNode node in GameDatabase.Instance.GetConfigNodes("SASPreset"))
@@ -49,22 +61,22 @@ namespace PilotAssistant.Presets
                 if (node == null)
                     continue;
 
-                SASPresetList.Add(new SASPreset(node));
+                sasPresetList.Add(new SASPreset(node));
             }
         }
-        
-        public static void SavePresetsToFile()
+
+        public void SavePresetsToFile()
         {
             ConfigNode node = new ConfigNode();
-            if (PAPresetList.Count == 0 && SASPresetList.Count == 0)
+            if (paPresetList.Count == 0 && sasPresetList.Count == 0)
                 node.AddValue("dummy", "do not delete me");
             else
             {
-                foreach (PAPreset p in PAPresetList)
+                foreach (PAPreset p in paPresetList)
                 {
                     node.AddNode(p.ToConfigNode());
                 }
-                foreach (SASPreset p in SASPresetList)
+                foreach (SASPreset p in sasPresetList)
                 {
                     node.AddNode(p.ToConfigNode());
                 }
@@ -72,7 +84,7 @@ namespace PilotAssistant.Presets
             node.Save(KSPUtil.ApplicationRootPath.Replace("\\", "/") + "GameData/Pilot Assistant/Presets.cfg");
         }
 
-        public static void InitDefaultStockSASTuning(VesselAutopilot.VesselSAS sas)
+        public void InitDefaultStockSASTuning(VesselAutopilot.VesselSAS sas)
         {
             defaultStockSASTuning = new SASPreset(sas, "Stock");
             if (activeStockSASPreset == null)
@@ -83,20 +95,20 @@ namespace PilotAssistant.Presets
                 Messaging.PostMessage("Stock SAS active preset loaded.");
             }
         }
-        
-        public static void InitDefaultSASTuning(PID.PID_Controller[] controllers)
+
+        public void InitDefaultSASTuning(PID.PID_Controller[] controllers)
         {
             defaultSASTuning = new SASPreset(controllers, "Default");
             if (activeSASPreset == null)
-                activeSASPreset = PresetManager.defaultSASTuning;
+                activeSASPreset = defaultSASTuning;
             else if (activeSASPreset != defaultSASTuning)
             {
                 LoadSASPreset(controllers, activeSASPreset);
                 Messaging.PostMessage("SSAS active preset loaded.");
             }
         }
-        
-        public static void InitDefaultPATuning(PID.PID_Controller[] controllers)
+
+        public void InitDefaultPATuning(PID.PID_Controller[] controllers)
         {
             defaultPATuning = new PAPreset(controllers, "Default");
             if (activePAPreset == null)
@@ -108,44 +120,44 @@ namespace PilotAssistant.Presets
             }
         }
 
-        public static SASPreset GetActiveStockSASPreset()
+        public SASPreset GetActiveStockSASPreset()
         {
             return activeStockSASPreset;
         }
-        
-        public static SASPreset GetActiveSASPreset()
+
+        public SASPreset GetActiveSASPreset()
         {
             return activeSASPreset;
         }
-        
-        public static PAPreset GetActivePAPreset()
+
+        public PAPreset GetActivePAPreset()
         {
             return activePAPreset;
         }
 
-        public static SASPreset GetDefaultStockSASTuning()
+        public SASPreset GetDefaultStockSASTuning()
         {
             return defaultStockSASTuning;
         }
 
-        public static SASPreset GetDefaultSASTuning()
+        public SASPreset GetDefaultSASTuning()
         {
             return defaultSASTuning;
         }
 
-        public static PAPreset GetDefaultPATuning()
+        public PAPreset GetDefaultPATuning()
         {
             return defaultPATuning;
         }
 
-        public static void RegisterStockSASPreset(VesselAutopilot.VesselSAS sas, string name)
+        public void RegisterStockSASPreset(VesselAutopilot.VesselSAS sas, string name)
         {
             if (name == "")
             {
                 Messaging.PostMessage("Failed to add preset with no name.");
                 return;
-            } 
-            foreach (SASPreset p in SASPresetList)
+            }
+            foreach (SASPreset p in sasPresetList)
             {
                 if (name == p.GetName())
                 {
@@ -155,19 +167,19 @@ namespace PilotAssistant.Presets
             }
 
             SASPreset p2 = new SASPreset(sas, name);
-            SASPresetList.Add(p2);
+            sasPresetList.Add(p2);
             LoadStockSASPreset(sas, p2);
             SavePresetsToFile();
         }
-        
-        public static void RegisterSASPreset(PID.PID_Controller[] controllers, string name)
+
+        public void RegisterSASPreset(PID.PID_Controller[] controllers, string name)
         {
             if (name == "")
             {
                 Messaging.PostMessage("Failed to add preset with no name.");
                 return;
-            } 
-            foreach (SASPreset p in SASPresetList)
+            }
+            foreach (SASPreset p in sasPresetList)
             {
                 if (name == p.GetName())
                 {
@@ -177,19 +189,19 @@ namespace PilotAssistant.Presets
             }
 
             SASPreset p2 = new SASPreset(controllers, name);
-            SASPresetList.Add(p2);
+            sasPresetList.Add(p2);
             LoadSASPreset(controllers, p2);
             SavePresetsToFile();
         }
-        
-        public static void RegisterPAPreset(PID.PID_Controller[] controllers, string name)
+
+        public void RegisterPAPreset(PID.PID_Controller[] controllers, string name)
         {
             if (name == "")
             {
                 Messaging.PostMessage("Failed to add preset with no name.");
                 return;
             }
-            foreach (PAPreset p in PAPresetList)
+            foreach (PAPreset p in paPresetList)
             {
                 if (name == p.GetName())
                 {
@@ -197,39 +209,39 @@ namespace PilotAssistant.Presets
                     return;
                 }
             }
-                
+
             PAPreset p2 = new PAPreset(controllers, name);
-            PAPresetList.Add(p2);
+            paPresetList.Add(p2);
             LoadPAPreset(controllers, p2);
             SavePresetsToFile();
         }
 
-        public static void LoadStockSASPreset(VesselAutopilot.VesselSAS sas, SASPreset p)
+        public void LoadStockSASPreset(VesselAutopilot.VesselSAS sas, SASPreset p)
         {
             activeStockSASPreset = p;
             p.LoadStockPreset(sas);
             Messaging.PostMessage("Loaded preset \"" + p.GetName() + "\"");
         }
-        
-        public static void LoadSASPreset(PID.PID_Controller[] controllers, SASPreset p)
+
+        public void LoadSASPreset(PID.PID_Controller[] controllers, SASPreset p)
         {
             activeSASPreset = p;
             p.LoadPreset(controllers);
             Messaging.PostMessage("Loaded preset \"" + p.GetName() + "\"");
         }
-        
-        public static void LoadPAPreset(PID.PID_Controller[] controllers, PAPreset p)
+
+        public void LoadPAPreset(PID.PID_Controller[] controllers, PAPreset p)
         {
             activePAPreset = p;
             p.LoadPreset(controllers);
             Messaging.PostMessage("Loaded preset \"" + p.GetName() + "\"");
         }
 
-        public static List<SASPreset> GetAllSASPresets()
+        public List<SASPreset> GetAllSASPresets()
         {
             // return a shallow copy of the list
             List<SASPreset> l = new List<SASPreset>();
-            foreach (SASPreset p in SASPresetList)
+            foreach (SASPreset p in sasPresetList)
             {
                 if (!p.IsStockSAS())
                     l.Add(p);
@@ -237,46 +249,46 @@ namespace PilotAssistant.Presets
             return l;
         }
 
-        public static List<SASPreset> GetAllStockSASPresets()
+        public List<SASPreset> GetAllStockSASPresets()
         {
             List<SASPreset> l = new List<SASPreset>();
-            foreach (SASPreset p in SASPresetList)
+            foreach (SASPreset p in sasPresetList)
             {
                 if (p.IsStockSAS())
                     l.Add(p);
             }
             return l;
         }
-        
-        public static List<PAPreset> GetAllPAPresets()
+
+        public List<PAPreset> GetAllPAPresets()
         {
             // return a shallow copy of the list
-            return new List<PAPreset>(PAPresetList);
+            return new List<PAPreset>(paPresetList);
         }
 
-        public static void RemovePreset(SASPreset p)
+        public void RemovePreset(SASPreset p)
         {
             if (p.IsStockSAS())
             {
                 if (activeStockSASPreset == p)
                     activeStockSASPreset = null;
-                SASPresetList.Remove(p);
+                sasPresetList.Remove(p);
                 SavePresetsToFile();
             }
             else
             {
                 if (activeSASPreset == p)
                     activeSASPreset = null;
-                SASPresetList.Remove(p);
+                sasPresetList.Remove(p);
                 SavePresetsToFile();
             }
         }
-        
-        public static void RemovePreset(PAPreset p)
+
+        public void RemovePreset(PAPreset p)
         {
             if (activePAPreset == p)
                 activePAPreset = null;
-            PAPresetList.Remove(p);
+            paPresetList.Remove(p);
             SavePresetsToFile();
         }
     }

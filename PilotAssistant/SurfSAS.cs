@@ -20,31 +20,43 @@ namespace PilotAssistant
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     class SurfSAS : MonoBehaviour
     {
-        private static FlightData flightData;
-        private static PID_Controller[] controllers = new PID_Controller[3]; 
+        // Singleton pattern, as opposed to using semi-static classes
+        private static SurfSAS instance;
+        public static SurfSAS Instance
+        {
+            get { return instance; }
+        }
+
+        private FlightData flightData;
+        private PID_Controller[] controllers = new PID_Controller[3];
 
         // Current mode
-        private static bool ssasMode = false;
+        private bool ssasMode = false;
         // Used to monitor the use of SAS_TOGGLE key for SSAS.
-        private static bool ssasToggleKey = false;
+        private bool ssasToggleKey = false;
         // Used to monitor the use of SAS_HOLD key for SSAS.
-        private static bool ssasHoldKey = false;
+        private bool ssasHoldKey = false;
         // Used to selectively enable SSAS on a per axis basis
-        private static bool[] isSSASAxisEnabled = { true, true, true };
+        private bool[] isSSASAxisEnabled = { true, true, true };
         // Used to monitor user input, and pause SSAS on a per axis basis
-        private static bool[] isPaused = { false, false, false };
+        private bool[] isPaused = { false, false, false };
 
-        private static float activationFadeRoll = 1;
-        private static float activationFadePitch = 1;
-        private static float activationFadeYaw = 1;
+        private float activationFadeRoll = 1;
+        private float activationFadePitch = 1;
+        private float activationFadeYaw = 1;
 
-        private static bool pauseMgrUserPitch = false;
-        private static bool pauseMgrUserRoll = false;
-        private static bool pauseMgrUserYaw = false;
+        private bool pauseMgrUserPitch = false;
+        private bool pauseMgrUserRoll = false;
+        private bool pauseMgrUserYaw = false;
 
         // rollState: false = surface mode, true = vector mode
-        private static bool rollState = false; 
-        private static Vector3d rollTarget = Vector3d.zero;
+        private bool rollState = false;
+        private Vector3d rollTarget = Vector3d.zero;
+
+        public void Awake()
+        {
+            instance = this;
+        }
 
         public void Start()
         {
@@ -59,15 +71,15 @@ namespace PilotAssistant
             controllers[(int)SASList.Yaw] = yaw;
 
             // Set up a default preset that can be easily returned to
-            PresetManager.InitDefaultSASTuning(controllers);
-            PresetManager.InitDefaultStockSASTuning(flightData.Vessel.Autopilot.SAS);
-            
+            PresetManager.Instance.InitDefaultSASTuning(controllers);
+            PresetManager.Instance.InitDefaultStockSASTuning(flightData.Vessel.Autopilot.SAS);
+
             isPaused[0] = isPaused[1] = isPaused[2] = false;
-            
+
             // register vessel
             flightData.Vessel.OnAutopilotUpdate += new FlightInputCallback(VesselController);
             GameEvents.onVesselChange.Add(VesselSwitch);
-            
+
             RenderingManager.AddToPostDrawQueue(5, DrawGUI);
         }
 
@@ -82,7 +94,7 @@ namespace PilotAssistant
         {
             RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
             GameEvents.onVesselChange.Remove(VesselSwitch);
-            PresetManager.SavePresetsToFile();
+            PresetManager.Instance.SavePresetsToFile();
             ssasMode = false;
             ssasToggleKey = false;
             ssasHoldKey = false;
@@ -107,7 +119,7 @@ namespace PilotAssistant
             KeyPressChanges();
         }
 
-        private static void KeyPressChanges()
+        private void KeyPressChanges()
         {
             // Respect current input locks
             if (InputLockManager.IsLocked(ControlTypes.ALL_SHIP_CONTROLS))
@@ -148,7 +160,7 @@ namespace PilotAssistant
                     GUI.backgroundColor = GeneralUI.SSASActiveBGColor;
                 else
                     GUI.backgroundColor = GeneralUI.SSASInactiveBGColor;
-                
+
                 if (GUI.Button(new Rect(Screen.width / 2 + 50, Screen.height - 200, 50, 30), "SSAS"))
                 {
                     ToggleOperational();
@@ -158,19 +170,19 @@ namespace PilotAssistant
             SASMainWindow.Draw(AppLauncher.AppLauncherInstance.bDisplaySAS);
         }
 
-        private static void VesselController(FlightCtrlState state)
+        private void VesselController(FlightCtrlState state)
         {
             flightData.UpdateAttitude();
 
             if (!IsSSASOperational())
                 return;
-            
+
             PauseManager(state); // manage activation of SAS axes depending on user input
-            
+
             float vertResponse = 0;
             if (IsSSASAxisEnabled(SASList.Pitch))
                 vertResponse = -1 * (float)GetController(SASList.Pitch).Response(flightData.Pitch);
-            
+
             float hrztResponse = 0;
             if (IsSSASAxisEnabled(SASList.Yaw))
             {
@@ -181,9 +193,9 @@ namespace PilotAssistant
                 else if (GetController(SASList.Yaw).SetPoint - flightData.Heading > 180)
                     hrztResponse = -1 * (float)GetController(SASList.Yaw).Response(flightData.Heading + 360);
             }
-            
+
             double rollRad = Math.PI / 180 * flightData.Roll;
-            
+
             if ((!IsPaused(SASList.Pitch) && IsSSASAxisEnabled(SASList.Pitch)) ||
                 (!IsPaused(SASList.Yaw) && IsSSASAxisEnabled(SASList.Yaw)))
             {
@@ -192,18 +204,18 @@ namespace PilotAssistant
                     activationFadePitch *= 0.98f; // ~100 physics frames
                 else
                     activationFadePitch = 1;
-                
+
                 state.yaw = (vertResponse * (float)Math.Sin(rollRad) + hrztResponse * (float)Math.Cos(rollRad)) / activationFadeYaw;
                 if (activationFadeYaw > 1)
                     activationFadeYaw *= 0.98f; // ~100 physics frames
                 else
                     activationFadeYaw = 1;
             }
-            
+
             RollResponse(state);
         }
 
-        private static void RollResponse(FlightCtrlState state)
+        private void RollResponse(FlightCtrlState state)
         {
             if (!IsPaused(SASList.Roll) && IsSSASAxisEnabled(SASList.Roll))
             {
@@ -261,22 +273,22 @@ namespace PilotAssistant
             }
         }
 
-        public static FlightData GetFlightData() { return flightData; }
+        public FlightData GetFlightData() { return flightData; }
 
-        public static PID_Controller GetController(SASList id)
+        public PID_Controller GetController(SASList id)
         {
             return controllers[(int)id];
         }
 
-        public static void ToggleSSASMode()
+        public void ToggleSSASMode()
         {
             // Swap modes, ensure operational state doesn't change.
             bool wasOperational = IsSSASOperational() || IsStockSASOperational();
             ssasMode = !ssasMode;
-            SetOperational(wasOperational);                
+            SetOperational(wasOperational);
         }
 
-        public static void ToggleOperational()
+        public void ToggleOperational()
         {
             if (ssasMode)
                 SetOperational(!IsSSASOperational());
@@ -284,7 +296,7 @@ namespace PilotAssistant
                 SetOperational(!IsStockSASOperational());
         }
 
-        public static void SetOperational(bool operational)
+        public void SetOperational(bool operational)
         {
             if (ssasMode)
             {
@@ -305,71 +317,71 @@ namespace PilotAssistant
             }
         }
 
-        public static bool IsSSASAxisEnabled(SASList id)
+        public bool IsSSASAxisEnabled(SASList id)
         {
             return isSSASAxisEnabled[(int)id];
         }
 
-        public static void SetSSASAxisEnabled(SASList id, bool enabled)
+        public void SetSSASAxisEnabled(SASList id, bool enabled)
         {
             isSSASAxisEnabled[(int)id] = enabled;
         }
 
-        public static bool IsSSASMode() { return ssasMode; }
+        public bool IsSSASMode() { return ssasMode; }
 
-        private static bool IsPaused(SASList id)
+        private bool IsPaused(SASList id)
         {
             return isPaused[(int)id];
         }
 
-        private static void SetPaused(SASList id, bool val)
+        private void SetPaused(SASList id, bool val)
         {
             isPaused[(int)id] = val;
         }
 
-        public static void UpdatePreset()
+        public void UpdatePreset()
         {
-            SASPreset p = PresetManager.GetActiveSASPreset();
+            SASPreset p = PresetManager.Instance.GetActiveSASPreset();
             if (p != null)
                 p.Update(controllers);
-            PresetManager.SavePresetsToFile();
-        }
-        
-        public static void RegisterNewPreset(string name)
-        {
-            PresetManager.RegisterSASPreset(controllers, name);
-        }
-        
-        public static void LoadPreset(SASPreset p)
-        {
-            PresetManager.LoadSASPreset(controllers, p);
-        }
-        
-        public static void UpdateStockPreset()
-        {
-            SASPreset p = PresetManager.GetActiveStockSASPreset();
-            if (p != null)
-                p.UpdateStock(flightData.Vessel.Autopilot.SAS);
-            PresetManager.SavePresetsToFile();
-        }
-        
-        public static void RegisterNewStockPreset(string name)
-        {
-            PresetManager.RegisterStockSASPreset(flightData.Vessel.Autopilot.SAS, name);
-        }
-        
-        public static void LoadStockPreset(SASPreset p)
-        {
-            PresetManager.LoadStockSASPreset(flightData.Vessel.Autopilot.SAS, p);
+            PresetManager.Instance.SavePresetsToFile();
         }
 
-        public static void updateTarget()
+        public void RegisterNewPreset(string name)
+        {
+            PresetManager.Instance.RegisterSASPreset(controllers, name);
+        }
+
+        public void LoadPreset(SASPreset p)
+        {
+            PresetManager.Instance.LoadSASPreset(controllers, p);
+        }
+
+        public void UpdateStockPreset()
+        {
+            SASPreset p = PresetManager.Instance.GetActiveStockSASPreset();
+            if (p != null)
+                p.UpdateStock(flightData.Vessel.Autopilot.SAS);
+            PresetManager.Instance.SavePresetsToFile();
+        }
+
+        public void RegisterNewStockPreset(string name)
+        {
+            PresetManager.Instance.RegisterStockSASPreset(flightData.Vessel.Autopilot.SAS, name);
+        }
+
+        public void LoadStockPreset(SASPreset p)
+        {
+            PresetManager.Instance.LoadStockSASPreset(flightData.Vessel.Autopilot.SAS, p);
+        }
+
+        public void updateTarget()
         {
             if (rollState)
                 GetController(SASList.Roll).SetPoint = 0;
             else
                 GetController(SASList.Roll).SetPoint = flightData.Roll;
-            
+
             GetController(SASList.Pitch).SetPoint = flightData.Pitch;
             GetController(SASList.Yaw).SetPoint = flightData.Heading;
 
@@ -380,7 +392,7 @@ namespace PilotAssistant
             rollTarget = flightData.Vessel.ReferenceTransform.right;
         }
 
-        private static void PauseManager(FlightCtrlState state)
+        private void PauseManager(FlightCtrlState state)
         {
             if (state.pitch != 0.0 || state.yaw != 0.0)
             {
@@ -426,13 +438,13 @@ namespace PilotAssistant
             }
         }
 
-        public static bool IsSSASOperational()
+        public bool IsSSASOperational()
         {
             // ssasHoldKey toggles the main state, i.e. active --> off, off --> active
             return (ssasToggleKey != ssasHoldKey) && ssasMode;
         }
 
-        public static bool IsStockSASOperational()
+        public bool IsStockSASOperational()
         {
             return flightData.Vessel.ActionGroups[KSPActionGroup.SAS];
         }

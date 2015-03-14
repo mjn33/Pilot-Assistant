@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace PilotAssistant.UI
 {
-    class Messaging
+    public static class Messaging
     {
         public static void PostMessage(string msg)
         {
