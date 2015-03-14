@@ -55,23 +55,25 @@ namespace PilotAssistant.AppLauncher
 
         private void OnGUI()
         {
-            GUI.skin = HighLogic.Skin;
+            GUI.skin = GeneralUI.Skin;
             if (bDisplayOptions)
             {
-                windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawOptionsWindow, "", GeneralUI.OptionsWindowStyle, GUILayout.Width(0), GUILayout.Height(0));
+                windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawOptionsWindow, "",
+                                              GeneralUI.Style(UIStyle.OptionsWindow),
+                                              GUILayout.Width(0), GUILayout.Height(0));
             }
         }
 
         private void DrawOptionsWindow(int id)
         {
-            bool tmpToggle = GUILayout.Toggle(bDisplayAssistant, "Pilot Assistant", GeneralUI.ToggleButtonStyle);
+            bool tmpToggle = GUILayout.Toggle(bDisplayAssistant, "Pilot Assistant", GeneralUI.Style(UIStyle.ToggleButton));
             if (tmpToggle != bDisplayAssistant)
             {
                 bDisplayAssistant = !bDisplayAssistant;
                 btnLauncher.toggleButton.SetFalse();
             }
 
-            tmpToggle = GUILayout.Toggle(bDisplaySAS, "SAS Systems", GeneralUI.ToggleButtonStyle);
+            tmpToggle = GUILayout.Toggle(bDisplaySAS, "SAS Systems", GeneralUI.Style(UIStyle.ToggleButton));
             if (tmpToggle != bDisplaySAS)
             {
                 bDisplaySAS = !bDisplaySAS;

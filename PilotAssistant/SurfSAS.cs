@@ -152,7 +152,7 @@ namespace PilotAssistant
 
         public void DrawGUI()
         {
-            GUI.skin = HighLogic.Skin;
+            GUI.skin = GeneralUI.Skin;
             if (IsSSASMode())
             {
                 Color oldColor = GUI.backgroundColor;

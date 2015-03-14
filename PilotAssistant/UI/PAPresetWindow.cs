@@ -19,7 +19,7 @@ namespace PilotAssistant.UI
         {
             if (show)
             {
-                GUI.skin = HighLogic.Skin;
+                GUI.skin = GeneralUI.Skin;
                 windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawPresetWindow, "Presets", GUILayout.Width(200), GUILayout.Height(0));
             }
             else
@@ -42,10 +42,10 @@ namespace PilotAssistant.UI
             if (PresetManager.Instance.GetActivePAPreset() != null)
             {
                 PAPreset p = PresetManager.Instance.GetActivePAPreset();
-                GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.BoldLabelStyle);
+                GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.Style(UIStyle.BoldLabel));
                 if (p != PresetManager.Instance.GetDefaultPATuning())
                 {
-                    if (GUILayout.Button("Update Preset", GeneralUI.ButtonStyle))
+                    if (GUILayout.Button("Update Preset"))
                     {
                         PilotAssistant.Instance.UpdatePreset();
                     }
@@ -55,17 +55,17 @@ namespace PilotAssistant.UI
             GUILayout.BeginHorizontal();
             GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
             newPresetName = GUILayout.TextField(newPresetName);
-            if (GUILayout.Button("+", GeneralUI.ButtonStyle, GUILayout.Width(25)))
+            if (GUILayout.Button("+", GUILayout.Width(25)))
             {
                 PilotAssistant.Instance.RegisterNewPreset(newPresetName);
                 newPresetName = "";
             }
             GUILayout.EndHorizontal();
 
-            GUILayout.BeginVertical(GeneralUI.GUISectionStyle);
-            GUILayout.Label("Available presets: ", GeneralUI.BoldLabelStyle);
+            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection));
+            GUILayout.Label("Available presets: ", GeneralUI.Style(UIStyle.BoldLabel));
 
-            if (GUILayout.Button("Default", GeneralUI.ButtonStyle))
+            if (GUILayout.Button("Default"))
             {
                 PilotAssistant.Instance.LoadPreset(PresetManager.Instance.GetDefaultPATuning());
             }
@@ -74,11 +74,11 @@ namespace PilotAssistant.UI
             foreach (PAPreset p in allPresets)
             {
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button(p.GetName(), GeneralUI.ButtonStyle))
+                if (GUILayout.Button(p.GetName()))
                 {
                     PilotAssistant.Instance.LoadPreset(p);
                 }
-                if (GUILayout.Button("x", GeneralUI.ButtonStyle, GUILayout.Width(25)))
+                if (GUILayout.Button("x", GUILayout.Width(25)))
                 {
                     PresetManager.Instance.RemovePreset(p);
                 }

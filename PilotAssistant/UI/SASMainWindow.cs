@@ -23,7 +23,7 @@ namespace PilotAssistant.UI
         {
             if (show)
             {
-                GUI.skin = HighLogic.Skin;
+                GUI.skin = GeneralUI.Skin;
                 windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawSASWindow, "SAS Module", GUILayout.Width(0), GUILayout.Height(0));
                 
                 SASPresetWindow.Reposition(windowRect.x + windowRect.width, windowRect.y);
@@ -44,22 +44,23 @@ namespace PilotAssistant.UI
             bool isOperational = SurfSAS.Instance.IsSSASOperational() || SurfSAS.Instance.IsStockSASOperational();
             bool isSSASMode = SurfSAS.Instance.IsSSASMode();
             GUILayout.BeginHorizontal();
-            showPresets = GUILayout.Toggle(showPresets, "Presets", GeneralUI.ToggleButtonStyle);
+            showPresets = GUILayout.Toggle(showPresets, "Presets", GeneralUI.Style(UIStyle.ToggleButton));
             GUILayout.EndHorizontal();
             
             // SSAS/SAS
-            GUILayout.BeginVertical(GeneralUI.GUISectionStyle, GUILayout.ExpandWidth(true));
+            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection), GUILayout.ExpandWidth(true));
             GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(isOperational, isOperational ? "On" : "Off", GeneralUI.ToggleButtonStyle, GUILayout.ExpandWidth(false)) != isOperational)
+            if (GUILayout.Toggle(isOperational, isOperational ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
+                                 GUILayout.ExpandWidth(false)) != isOperational)
             {
                 SurfSAS.Instance.ToggleOperational();
             }
-            GUILayout.Label("SAS", GeneralUI.BoldLabelStyle, GUILayout.ExpandWidth(true));
+            GUILayout.Label("SAS", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             GUILayout.Label("Mode:");
-            bool tmpToggle1 = GUILayout.Toggle(!isSSASMode, "Stock SAS", GeneralUI.ToggleButtonStyle);
-            bool tmpToggle2 = GUILayout.Toggle(isSSASMode, "SSAS", GeneralUI.ToggleButtonStyle);
+            bool tmpToggle1 = GUILayout.Toggle(!isSSASMode, "Stock SAS", GeneralUI.Style(UIStyle.ToggleButton));
+            bool tmpToggle2 = GUILayout.Toggle(isSSASMode, "SSAS", GeneralUI.Style(UIStyle.ToggleButton));
             // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
             if (tmpToggle1 && tmpToggle2)
                 SurfSAS.Instance.ToggleSSASMode();
@@ -106,7 +107,7 @@ namespace PilotAssistant.UI
         private static void DrawPIDValues(SASList controllerID, string inputName)
         {
             PID.PID_Controller controller = SurfSAS.Instance.GetController(controllerID);
-            if (GUILayout.Button(inputName, GeneralUI.ButtonStyle, GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(inputName, GUILayout.ExpandWidth(true)))
                 ssasPIDDisplay[(int)controllerID] = !ssasPIDDisplay[(int)controllerID]; 
 
             if (ssasPIDDisplay[(int)controllerID])
@@ -120,7 +121,7 @@ namespace PilotAssistant.UI
 
         private static void DrawPIDValues(PIDclamp controller, string inputName, SASList id)
         {
-            if (GUILayout.Button(inputName, GeneralUI.ButtonStyle, GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(inputName, GUILayout.ExpandWidth(true)))
             {
                 stockPIDDisplay[(int)id] = !stockPIDDisplay[(int)id];
             }
