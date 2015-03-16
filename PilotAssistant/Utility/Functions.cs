@@ -8,6 +8,21 @@ namespace PilotAssistant.Utility
     public static class Functions
     {
         /// <summary>
+        /// Calculates the angle to feed corrected for 0/360 crossings. For example if the target is 350 and the
+        /// current is 10, it will return 370 giving a diff of -20 degrees else you get +ve 340 and the turn is in the
+        /// wrong direction.
+        /// </summary>
+        public static double CalcRelativeAngle(double current, double target)
+        {
+            if (target - current < -180)
+                return current - 360;
+            else if (target - current > 180)
+                return current + 360;
+            else
+                return current;
+        }
+
+        /// <summary>
         /// Clamp double input between maximum and minimum value
         /// </summary>
         /// <param name="val">variable to be clamped</param>

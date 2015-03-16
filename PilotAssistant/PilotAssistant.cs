@@ -116,7 +116,7 @@ namespace PilotAssistant
             KeyPressChanges();
         }
 
-        public void DrawGUI()
+        private void DrawGUI()
         {
             PAMainWindow.Draw(AppLauncher.AppLauncherInstance.bDisplayAssistant);
         }
@@ -131,24 +131,17 @@ namespace PilotAssistant
             // Heading Control
             if (isHdgActive)
             {
-                if (!isWingLvlActive)
+                // Don't follow target heading when getting close to poles.
+                if (!isWingLvlActive &&
+                    flightData.Vessel.latitude < 88 && flightData.Vessel.latitude > -88)
                 {
-                    if (GetController(PIDList.HdgBank).SetPoint - flightData.Heading >= -180 && GetController(PIDList.HdgBank).SetPoint - flightData.Heading <= 180)
-                    {
-                        GetController(PIDList.Aileron).SetPoint = GetController(PIDList.HdgBank).Response(flightData.Heading);
-                        GetController(PIDList.HdgYaw).SetPoint = GetController(PIDList.HdgBank).Response(flightData.Heading);
-                    }
-                    else if (GetController(PIDList.HdgBank).SetPoint - flightData.Heading < -180)
-                    {
-                        GetController(PIDList.Aileron).SetPoint = GetController(PIDList.HdgBank).Response(flightData.Heading - 360);
-                        GetController(PIDList.HdgYaw).SetPoint = GetController(PIDList.HdgBank).Response(flightData.Heading - 360);
-                    }
-                    else if (GetController(PIDList.HdgBank).SetPoint - flightData.Heading > 180)
-                    {
-                        GetController(PIDList.Aileron).SetPoint = GetController(PIDList.HdgBank).Response(flightData.Heading + 360);
-                        GetController(PIDList.HdgYaw).SetPoint = GetController(PIDList.HdgBank).Response(flightData.Heading + 360);
-                    }
-
+                    // Calculate the bank angle response based on the current heading
+                    double hdgBankReponse = GetController(PIDList.HdgBank).Response(
+                        Functions.CalcRelativeAngle(flightData.Heading, GetController(PIDList.HdgBank).SetPoint));
+                    // Aileron setpoint updated, bank angle also used for yaw calculations (don't go direct to rudder
+                    // because we want yaw stabilisation *or* turn assistance)
+                    GetController(PIDList.Aileron).SetPoint = hdgBankReponse;
+                    GetController(PIDList.HdgYaw).SetPoint = hdgBankReponse;
                     GetController(PIDList.Rudder).SetPoint = -GetController(PIDList.HdgYaw).Response(flightData.Yaw);
                 }
                 else
@@ -157,7 +150,7 @@ namespace PilotAssistant
                     GetController(PIDList.Rudder).SetPoint = 0;
                 }
                 state.roll = (float)Functions.Clamp(GetController(PIDList.Aileron).Response(flightData.Roll) + state.roll, -1, 1);
-                state.yaw = (float)GetController(PIDList.Rudder).Response(flightData.Yaw);
+                state.yaw = (float)Functions.Clamp(GetController(PIDList.Rudder).Response(flightData.Yaw), -1, 1);
             }
 
             if (isVertActive)
@@ -167,7 +160,7 @@ namespace PilotAssistant
                     GetController(PIDList.VertSpeed).SetPoint = -GetController(PIDList.Altitude).Response(flightData.Vessel.altitude);
 
                 GetController(PIDList.Elevator).SetPoint = -GetController(PIDList.VertSpeed).Response(flightData.Vessel.verticalSpeed);
-                state.pitch = (float)-GetController(PIDList.Elevator).Response(flightData.AoA);
+                state.pitch = (float)Functions.Clamp(-GetController(PIDList.Elevator).Response(flightData.AoA), -1, 1);
             }
         }
 

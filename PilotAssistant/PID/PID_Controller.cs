@@ -5,7 +5,7 @@ namespace PilotAssistant.PID
 {
     using Utility;
 
-    public class PID_Controller : MonoBehaviour
+    public class PID_Controller
     {
         private double setpoint = 0; // process setpoint
 
