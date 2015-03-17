@@ -187,7 +187,7 @@ namespace PilotAssistant
                 }
                 GUI.backgroundColor = oldColor;
             }
-            SASMainWindow.Draw(AppLauncher.AppLauncherInstance.bDisplaySAS);
+            SASMainWindow.Draw(AppLauncher.AppLauncherFlight.bDisplaySAS);
         }
 
         private void VesselController(FlightCtrlState state)

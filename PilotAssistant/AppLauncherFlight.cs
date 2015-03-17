@@ -6,10 +6,10 @@ namespace PilotAssistant.AppLauncher
 {
     using Utility;
     [KSPAddon(KSPAddon.Startup.Flight, false)]
-    public class AppLauncherInstance : MonoBehaviour
+    public class AppLauncherFlight : MonoBehaviour
     {
-        private static ApplicationLauncherButton btnLauncher;
-        private static Rect windowRect = new Rect(Screen.width - 180, 40, 30, 30);
+        private ApplicationLauncherButton btnLauncher;
+        private Rect windowRect = new Rect(Screen.width, 38, 200, 30);
 
         private const int WINDOW_ID = 0984653;
 
@@ -20,10 +20,14 @@ namespace PilotAssistant.AppLauncher
         private void Awake()
         {
             GameEvents.onGUIApplicationLauncherReady.Add(this.OnAppLauncherReady);
+
+            RenderingManager.AddToPostDrawQueue(5, DrawGUI);
         }
 
         private void OnDestroy()
         {
+            RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
+
             GameEvents.onGUIApplicationLauncherReady.Remove(this.OnAppLauncherReady);
             if (btnLauncher != null)
                 ApplicationLauncher.Instance.RemoveModApplication(btnLauncher);
@@ -53,14 +57,17 @@ namespace PilotAssistant.AppLauncher
             bDisplayOptions = false;
         }
 
-        private void OnGUI()
+        private void DrawGUI()
         {
             GUI.skin = GeneralUI.Skin;
             if (bDisplayOptions)
             {
+                windowRect.x = Mathf.Clamp(Screen.width * 0.5f + btnLauncher.transform.position.x - 19.0f,
+                                           Screen.width * 0.5f,
+                                           Screen.width - windowRect.width);
                 windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawOptionsWindow, "",
                                               GeneralUI.Style(UIStyle.OptionsWindow),
-                                              GUILayout.Width(0), GUILayout.Height(0));
+                                              GUILayout.Width(200), GUILayout.Height(0));
             }
         }
 

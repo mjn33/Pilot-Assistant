@@ -196,6 +196,7 @@ namespace PilotAssistant.Utility
 
             GUIStyle optionsWindowStyle = new GUIStyle(skin.window);
             optionsWindowStyle.padding = new RectOffset(0, 0, 0, 0);
+            optionsWindowStyle.margin = new RectOffset(0, 0, 0, 0);
             skin.customStyles[(int)UIStyle.OptionsWindow] = optionsWindowStyle;
         }
 
