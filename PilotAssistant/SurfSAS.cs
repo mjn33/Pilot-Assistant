@@ -6,7 +6,6 @@ namespace PilotAssistant
 {
     using PID;
     using Utility;
-    using AppLauncher;
     using UI;
     using Presets;
 

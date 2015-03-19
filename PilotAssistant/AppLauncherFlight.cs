@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace PilotAssistant.AppLauncher
+namespace PilotAssistant
 {
     using UI;
     using Utility;
@@ -14,8 +14,7 @@ namespace PilotAssistant.AppLauncher
 
         private const int WINDOW_ID = 0984653;
 
-        public static bool bDisplayOptions = false;
-        public static bool bDisplayAssistant = false;
+        private bool showOptionsWindow = false;
 
         private void Awake()
         {
@@ -49,18 +48,18 @@ namespace PilotAssistant.AppLauncher
 
         private void OnToggleTrue()
         {
-            bDisplayOptions = true;
+            showOptionsWindow = true;
         }
 
         private void OnToggleFalse()
         {
-            bDisplayOptions = false;
+            showOptionsWindow = false;
         }
 
         private void DrawGUI()
         {
             GUI.skin = GeneralUI.Skin;
-            if (bDisplayOptions)
+            if (showOptionsWindow)
             {
                 windowRect.x = Mathf.Clamp(Screen.width * 0.5f + btnLauncher.transform.position.x - 19.0f,
                                            Screen.width * 0.5f,
@@ -73,10 +72,10 @@ namespace PilotAssistant.AppLauncher
 
         private void DrawOptionsWindow(int id)
         {
-            bool tmpToggle = GUILayout.Toggle(bDisplayAssistant, "Pilot Assistant", GeneralUI.Style(UIStyle.ToggleButton));
-            if (tmpToggle != bDisplayAssistant)
+            bool tmpToggle = GUILayout.Toggle(PAMainWindow.Instance.IsVisible(), "Pilot Assistant", GeneralUI.Style(UIStyle.ToggleButton));
+            if (tmpToggle != PAMainWindow.Instance.IsVisible())
             {
-                bDisplayAssistant = !bDisplayAssistant;
+                PAMainWindow.Instance.ToggleVisibility();
                 btnLauncher.toggleButton.SetFalse();
             }
 

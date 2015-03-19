@@ -4,203 +4,103 @@ using UnityEngine;
 
 namespace PilotAssistant.UI
 {
+    using Presets;
     using Utility;
 
-    static class PAMainWindow
+    [KSPAddon(KSPAddon.Startup.Flight, false)]
+    public class PAMainWindow : MonoBehaviour
     {
-        private static Rect windowRect = new Rect(10, 50, 10, 10);
+        // Singleton pattern, as opposed to using semi-static classes
+        private static PAMainWindow instance;
+        public static PAMainWindow Instance
+        {
+            get { return instance; }
+        }
 
-        private static bool showPresets = false;
+        private Rect windowRect = new Rect(10, 50, 10, 10);
+        private Rect presetWindowRect = new Rect(0, 0, 200, 10);
 
-        private static bool[] pidDisplay = { false, false, false, false, false, false, false };
+        private bool isVisible = false;
+        private bool showPresets = false;
 
-        private static bool showPIDLimits = false;
-        private static bool showControlSurfaces = false;
+        private bool[] pidDisplay;
 
-        private static double targetVert = 0.0;
-        private static double targetAlt = 0.0;
-        private static double targetHeading = 0.0;
+        private bool showPIDLimits = false;
+        private bool showControlSurfaces = false;
+
+        private double targetVert = 0.0;
+        private double targetAlt = 0.0;
+        private double targetHeading = 0.0;
+        private string newPresetName = "";
 
         private const int WINDOW_ID = 34244;
+        private const int PRESET_WINDOW_ID = 34245;
         private const string TEXT_FIELD_GROUP = "PAMainWindow";
 
-        public static void Draw(bool show)
+        private void Awake()
         {
-            if (show)
+            instance = this;
+            pidDisplay = new bool[Enum.GetNames(typeof(PIDList)).Length];
+        }
+
+        private void Start()
+        {
+            RenderingManager.AddToPostDrawQueue(5, DrawGUI);
+        }
+
+        private void OnDestroy()
+        {
+            RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
+        }
+
+        public bool IsVisible()
+        {
+            return isVisible;
+        }
+
+        public void ToggleVisibility()
+        {
+            isVisible = !isVisible;
+        }
+
+        private void DrawGUI()
+        {
+            GUI.skin = GeneralUI.Skin;
+            if (isVisible)
             {
-                GUI.skin = GeneralUI.Skin;
-                windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawWindow, "Pilot Assistant", GUILayout.Width(0), GUILayout.Height(0));
-                
-                PAPresetWindow.Reposition(windowRect.x + windowRect.width, windowRect.y);
-                PAPresetWindow.Draw(showPresets);
+                windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawMainWindow, "Pilot Assistant", GUILayout.Width(0),
+                                              GUILayout.Height(0));
+
+                if (showPresets)
+                {
+                    presetWindowRect.x = windowRect.x + windowRect.width;
+                    presetWindowRect.y = windowRect.y;
+                    presetWindowRect = GUILayout.Window(PRESET_WINDOW_ID, presetWindowRect, DrawPresetWindow, "Presets",
+                                                        GUILayout.Width(200), GUILayout.Height(0));
+                }
             }
             else
             {
                 GeneralUI.ClearLocks(TEXT_FIELD_GROUP);
-                PAPresetWindow.Draw(false);
             }
         }
 
-        public static void SetTargetHeading(double heading)
+        public void UpdateHeadingField()
         {
-            targetHeading = heading;
+            targetHeading = PilotAssistant.Instance.GetController(PIDList.HdgBank).SetPoint;
         }
 
-        public static double GetTargetHeading()
+        public void UpdateVertSpeedField()
         {
-            return targetHeading;
+            targetVert = PilotAssistant.Instance.GetController(PIDList.VertSpeed).SetPoint;
         }
 
-        public static void SetTargetVerticalSpeed(double speed)
+        public void UpdateAltitudeField()
         {
-            targetVert = speed;
+            targetAlt = PilotAssistant.Instance.GetController(PIDList.Altitude).SetPoint;
         }
 
-        public static double GetTargetVerticalSpeed()
-        {
-            return targetVert;
-        }
-
-        public static void SetTargetAltitude(double altitude)
-        {
-            targetAlt = altitude;
-        }
-
-        public static double GetTargetAltitude()
-        {
-            return targetAlt;
-        }
-
-        private static void DrawHeadingControls()
-        {
-            bool isHdgActive = PilotAssistant.Instance.IsHdgActive();
-            bool isWingLvlActive = PilotAssistant.Instance.IsWingLvlActive();
-            FlightData flightData = PilotAssistant.Instance.GetFlightData();
-            
-            // Heading
-            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection),
-                                    GUILayout.ExpandWidth(true));
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(isHdgActive, isHdgActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
-                                 GUILayout.ExpandWidth(false)) != isHdgActive)
-            {
-                PilotAssistant.Instance.ToggleHdg();
-            }
-            GUILayout.Label("Roll and Yaw Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Mode:");
-            bool tmpToggle1 = GUILayout.Toggle(!isWingLvlActive, "Hdg control", GeneralUI.Style(UIStyle.ToggleButton));
-            bool tmpToggle2 = GUILayout.Toggle(isWingLvlActive, "Wing lvl", GeneralUI.Style(UIStyle.ToggleButton));
-            // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
-            if (tmpToggle1 && tmpToggle2)
-                PilotAssistant.Instance.ToggleWingLvl();
-                
-            GUILayout.EndHorizontal();
-            if (!isWingLvlActive)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Target Hdg: ");
-                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
-                string targetHeadingText = GUILayout.TextField(targetHeading.ToString("F2"), GUILayout.Width(60));
-                try
-                {
-                    targetHeading = Functions.Clamp(double.Parse(targetHeadingText), 0, 360);
-                }
-                catch {}
-                if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
-                {
-                    ScreenMessages.PostScreenMessage("Target Heading updated");
-                    PilotAssistant.Instance.SetHdgActive();
-                }
-                GUILayout.EndHorizontal();
-            }
-            if (!isWingLvlActive)
-            {
-                DrawPIDValues(PIDList.HdgBank, "Heading", "\u00B0", flightData.Heading, 2, "Bank", "\u00B0", false, true, false);
-                DrawPIDValues(PIDList.HdgYaw, "Bank => Yaw", "\u00B0", flightData.Yaw, 2, "Yaw", "\u00B0", true, false, false);
-            }
-            if (showControlSurfaces)
-            {
-                DrawPIDValues(PIDList.Aileron, "Bank", "\u00B0", flightData.Roll, 3, "Deflect", "\u00B0", false, true, false);
-                DrawPIDValues(PIDList.Rudder, "Yaw", "\u00B0", flightData.Yaw, 3, "Deflect", "\u00B0", false, true, false);
-            }
-            GUILayout.EndVertical();            
-        }
-
-        private static void DrawVerticalControls()
-        {
-            bool isVertActive = PilotAssistant.Instance.IsVertActive();
-            bool isAltitudeHoldActive = PilotAssistant.Instance.IsAltitudeHoldActive();
-            FlightData flightData = PilotAssistant.Instance.GetFlightData();
-            
-            // Vertical speed
-            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection), GUILayout.ExpandWidth(true));
-            GUILayout.BeginHorizontal();
-            if (GUILayout.Toggle(isVertActive, isVertActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
-                                 GUILayout.ExpandWidth(false)) != isVertActive)
-            {
-                PilotAssistant.Instance.ToggleVert();
-            }
-            GUILayout.Label("Vertical Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
-            GUILayout.EndHorizontal();
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Mode:");
-            bool tmpToggle1 = GUILayout.Toggle(isAltitudeHoldActive, "Altitude",
-                                               GeneralUI.Style(UIStyle.ToggleButton));
-            bool tmpToggle2 = GUILayout.Toggle(!isAltitudeHoldActive, "Vertical Speed",
-                                               GeneralUI.Style(UIStyle.ToggleButton));
-            // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
-            if (tmpToggle1 && tmpToggle2)
-                PilotAssistant.Instance.ToggleAltitudeHold();
-            
-            GUILayout.EndHorizontal();
-
-            if (isAltitudeHoldActive)
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Target Altitude: ");
-                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
-                string targetAltText = GUILayout.TextField(targetAlt.ToString("F1"), GUILayout.Width(60));
-                try
-                {
-                    targetAlt = double.Parse(targetAltText);
-                }
-                catch {}
-                if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
-                {
-                    ScreenMessages.PostScreenMessage("Target Altitude updated");
-                    PilotAssistant.Instance.SetAltitudeHoldActive();
-                }
-                GUILayout.EndHorizontal();
-            }
-            else
-            {
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Target Speed: ");
-                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
-                string targetVertText = GUILayout.TextField(targetVert.ToString("F3"), GUILayout.Width(60));
-                try
-                {
-                    targetVert = double.Parse(targetVertText);
-                }
-                catch {}
-                if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
-                {
-                    ScreenMessages.PostScreenMessage("Target Speed updated");
-                    PilotAssistant.Instance.SetVertSpeedActive();
-                }
-                GUILayout.EndHorizontal();
-            }
-            if (isAltitudeHoldActive)
-                DrawPIDValues(PIDList.Altitude, "Altitude", "m", flightData.Vessel.altitude, 2, "Speed ", "m/s", true, true, false);
-            DrawPIDValues(PIDList.VertSpeed, "Vertical Speed", "m/s", flightData.Vessel.verticalSpeed, 2, "AoA", "\u00B0", true);
-            if (showControlSurfaces)
-                DrawPIDValues(PIDList.Elevator, "Angle of Attack", "\u00B0", flightData.AoA, 3, "Deflect", "\u00B0", true, true, false);
-            GUILayout.EndVertical();
-        }
-
-        private static void DrawWindow(int id)
+        private void DrawMainWindow(int id)
         {
             // Start a text field group.
             GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
@@ -225,12 +125,198 @@ namespace PilotAssistant.UI
 
             // Autolock vessel controls on focus.
             GeneralUI.AutolockTextFieldGroup(TEXT_FIELD_GROUP, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
-            
+
             GUILayout.EndVertical();
             GUI.DragWindow();
         }
 
-        private static void DrawPIDValues(
+        private void DrawHeadingControls()
+        {
+            bool isHdgActive = PilotAssistant.Instance.IsHdgActive();
+            bool isWingLvlActive = PilotAssistant.Instance.IsWingLvlActive();
+            FlightData flightData = PilotAssistant.Instance.GetFlightData();
+
+            // Heading
+            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection),
+                                    GUILayout.ExpandWidth(true));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(isHdgActive, isHdgActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
+                                 GUILayout.ExpandWidth(false)) != isHdgActive)
+            {
+                PilotAssistant.Instance.ToggleHdg();
+            }
+            GUILayout.Label("Roll and Yaw Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Mode:");
+            bool tmpToggle1 = GUILayout.Toggle(!isWingLvlActive, "Hdg control", GeneralUI.Style(UIStyle.ToggleButton));
+            bool tmpToggle2 = GUILayout.Toggle(isWingLvlActive, "Wing lvl", GeneralUI.Style(UIStyle.ToggleButton));
+            // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
+            if (tmpToggle1 && tmpToggle2)
+                PilotAssistant.Instance.ToggleWingLvl();
+
+            GUILayout.EndHorizontal();
+            if (!isWingLvlActive)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Target Hdg: ");
+                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+                string targetHeadingText = GUILayout.TextField(targetHeading.ToString("F2"), GUILayout.Width(60));
+                try
+                {
+                    targetHeading = Functions.Clamp(double.Parse(targetHeadingText), 0, 360);
+                }
+                catch {}
+                if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
+                {
+                    ScreenMessages.PostScreenMessage("Target Heading updated");
+                    PilotAssistant.Instance.SetHdgActive(targetHeading);
+                }
+                GUILayout.EndHorizontal();
+            }
+            if (!isWingLvlActive)
+            {
+                DrawPIDValues(PIDList.HdgBank, "Heading", "\u00B0", flightData.Heading, 2, "Bank", "\u00B0", false, true, false);
+                DrawPIDValues(PIDList.HdgYaw, "Bank => Yaw", "\u00B0", flightData.Yaw, 2, "Yaw", "\u00B0", true, false, false);
+            }
+            if (showControlSurfaces)
+            {
+                DrawPIDValues(PIDList.Aileron, "Bank", "\u00B0", flightData.Roll, 3, "Deflect", "\u00B0", false, true, false);
+                DrawPIDValues(PIDList.Rudder, "Yaw", "\u00B0", flightData.Yaw, 3, "Deflect", "\u00B0", false, true, false);
+            }
+            GUILayout.EndVertical();
+        }
+
+        private void DrawVerticalControls()
+        {
+            bool isVertActive = PilotAssistant.Instance.IsVertActive();
+            bool isAltitudeHoldActive = PilotAssistant.Instance.IsAltitudeHoldActive();
+            FlightData flightData = PilotAssistant.Instance.GetFlightData();
+
+            // Vertical speed
+            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection), GUILayout.ExpandWidth(true));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(isVertActive, isVertActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
+                                 GUILayout.ExpandWidth(false)) != isVertActive)
+            {
+                PilotAssistant.Instance.ToggleVert();
+            }
+            GUILayout.Label("Vertical Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Mode:");
+            bool tmpToggle1 = GUILayout.Toggle(isAltitudeHoldActive, "Altitude",
+                                               GeneralUI.Style(UIStyle.ToggleButton));
+            bool tmpToggle2 = GUILayout.Toggle(!isAltitudeHoldActive, "Vertical Speed",
+                                               GeneralUI.Style(UIStyle.ToggleButton));
+            // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
+            if (tmpToggle1 && tmpToggle2)
+                PilotAssistant.Instance.ToggleAltitudeHold();
+
+            GUILayout.EndHorizontal();
+
+            if (isAltitudeHoldActive)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Target Altitude: ");
+                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+                string targetAltText = GUILayout.TextField(targetAlt.ToString("F1"), GUILayout.Width(60));
+                try
+                {
+                    targetAlt = double.Parse(targetAltText);
+                }
+                catch {}
+                if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
+                {
+                    ScreenMessages.PostScreenMessage("Target Altitude updated");
+                    PilotAssistant.Instance.SetAltitudeHoldActive(targetAlt);
+                }
+                GUILayout.EndHorizontal();
+            }
+            else
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Target Speed: ");
+                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+                string targetVertText = GUILayout.TextField(targetVert.ToString("F3"), GUILayout.Width(60));
+                try
+                {
+                    targetVert = double.Parse(targetVertText);
+                }
+                catch {}
+                if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
+                {
+                    ScreenMessages.PostScreenMessage("Target Speed updated");
+                    PilotAssistant.Instance.SetVertSpeedActive(targetVert);
+                }
+                GUILayout.EndHorizontal();
+            }
+            if (isAltitudeHoldActive)
+                DrawPIDValues(PIDList.Altitude, "Altitude", "m", flightData.Vessel.altitude, 2, "Speed ", "m/s", true, true, false);
+            DrawPIDValues(PIDList.VertSpeed, "Vertical Speed", "m/s", flightData.Vessel.verticalSpeed, 2, "AoA", "\u00B0", true);
+            if (showControlSurfaces)
+                DrawPIDValues(PIDList.Elevator, "Angle of Attack", "\u00B0", flightData.AoA, 3, "Deflect", "\u00B0", true, true, false);
+            GUILayout.EndVertical();
+        }
+
+        private void DrawPresetWindow(int id)
+        {
+            // Start a text field group.
+            GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
+
+            if (PresetManager.Instance.GetActivePAPreset() != null)
+            {
+                PAPreset p = PresetManager.Instance.GetActivePAPreset();
+                GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.Style(UIStyle.BoldLabel));
+                if (p != PresetManager.Instance.GetDefaultPATuning())
+                {
+                    if (GUILayout.Button("Update Preset"))
+                    {
+                        PilotAssistant.Instance.UpdatePreset();
+                    }
+                }
+            }
+
+            GUILayout.BeginHorizontal();
+            GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+            newPresetName = GUILayout.TextField(newPresetName);
+            if (GUILayout.Button("+", GUILayout.Width(25)))
+            {
+                PilotAssistant.Instance.RegisterNewPreset(newPresetName);
+                newPresetName = "";
+            }
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection));
+            GUILayout.Label("Available presets: ", GeneralUI.Style(UIStyle.BoldLabel));
+
+            if (GUILayout.Button("Default"))
+            {
+                PilotAssistant.Instance.LoadPreset(PresetManager.Instance.GetDefaultPATuning());
+            }
+
+            List<PAPreset> allPresets = PresetManager.Instance.GetAllPAPresets();
+            foreach (PAPreset p in allPresets)
+            {
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button(p.GetName()))
+                {
+                    PilotAssistant.Instance.LoadPreset(p);
+                }
+                if (GUILayout.Button("x", GUILayout.Width(25)))
+                {
+                    PresetManager.Instance.RemovePreset(p);
+                }
+                GUILayout.EndHorizontal();
+            }
+
+            // Autolock vessel controls on focus.
+            GeneralUI.AutolockTextFieldGroup(TEXT_FIELD_GROUP, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
+
+            GUILayout.EndVertical();
+        }
+
+        private void DrawPIDValues(
             PIDList controllerID,
             string inputName,
             string inputUnits,
@@ -255,10 +341,10 @@ namespace PilotAssistant.UI
             {
                 if (showTarget)
                     GUILayout.Label(string.Format("Target: ", inputName) + controller.SetPoint.ToString("F" + displayPrecision) + inputUnits);
-                
+
                 GUILayout.BeginHorizontal();
                 GUILayout.BeginVertical();
-                
+
                 controller.PGain  = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kp:", controller.PGain, "F3", 45);
                 controller.IGain  = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Ki:", controller.IGain, "F3", 45);
                 controller.DGain  = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kd:", controller.DGain, "F3", 45);
