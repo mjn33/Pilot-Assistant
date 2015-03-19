@@ -99,8 +99,6 @@ namespace PilotAssistant
             // register vessel
             flightData.Vessel.OnAutopilotUpdate += new FlightInputCallback(VesselController);
             GameEvents.onVesselChange.Add(VesselSwitch);
-
-            RenderingManager.AddToPostDrawQueue(5, DrawGUI);
         }
 
         private void VesselSwitch(Vessel v)
@@ -112,7 +110,6 @@ namespace PilotAssistant
 
         public void OnDestroy()
         {
-            RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
             GameEvents.onVesselChange.Remove(VesselSwitch);
             PresetManager.Instance.SavePresetsToFile();
             ssasMode = false;
@@ -168,26 +165,6 @@ namespace PilotAssistant
                 if (IsSSASOperational())
                     UpdateTarget();
             }
-        }
-
-        private void DrawGUI()
-        {
-            GUI.skin = GeneralUI.Skin;
-            if (IsSSASMode())
-            {
-                Color oldColor = GUI.backgroundColor;
-                if (IsSSASOperational())
-                    GUI.backgroundColor = GeneralUI.SSASActiveBGColor;
-                else
-                    GUI.backgroundColor = GeneralUI.SSASInactiveBGColor;
-
-                if (GUI.Button(new Rect(Screen.width / 2 + 50, Screen.height - 200, 50, 30), "SSAS"))
-                {
-                    ToggleOperational();
-                }
-                GUI.backgroundColor = oldColor;
-            }
-            SASMainWindow.Draw(AppLauncher.AppLauncherFlight.bDisplaySAS);
         }
 
         private void VesselController(FlightCtrlState state)

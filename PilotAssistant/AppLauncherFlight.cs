@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace PilotAssistant.AppLauncher
 {
+    using UI;
     using Utility;
     [KSPAddon(KSPAddon.Startup.Flight, false)]
     public class AppLauncherFlight : MonoBehaviour
@@ -15,7 +16,6 @@ namespace PilotAssistant.AppLauncher
 
         public static bool bDisplayOptions = false;
         public static bool bDisplayAssistant = false;
-        public static bool bDisplaySAS = false;
 
         private void Awake()
         {
@@ -80,10 +80,10 @@ namespace PilotAssistant.AppLauncher
                 btnLauncher.toggleButton.SetFalse();
             }
 
-            tmpToggle = GUILayout.Toggle(bDisplaySAS, "SAS Systems", GeneralUI.Style(UIStyle.ToggleButton));
-            if (tmpToggle != bDisplaySAS)
+            tmpToggle = GUILayout.Toggle(SASMainWindow.Instance.IsVisible(), "SAS Systems", GeneralUI.Style(UIStyle.ToggleButton));
+            if (tmpToggle != SASMainWindow.Instance.IsVisible())
             {
-                bDisplaySAS = !bDisplaySAS;
+                SASMainWindow.Instance.ToggleVisibility();
                 btnLauncher.toggleButton.SetFalse();
             }
         }

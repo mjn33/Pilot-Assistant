@@ -59,7 +59,6 @@
     <Compile Include="UI\PAMainWindow.cs" />
     <Compile Include="UI\PAPresetWindow.cs" />
     <Compile Include="UI\SASMainWindow.cs" />
-    <Compile Include="UI\SASPresetWindow.cs" />
     <Compile Include="Utility\FlightData.cs" />
     <Compile Include="Utility\Functions.cs" />
     <Compile Include="Utility\GeneralUI.cs" />
