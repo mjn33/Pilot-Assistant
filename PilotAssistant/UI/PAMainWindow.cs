@@ -35,7 +35,6 @@ namespace PilotAssistant.UI
 
         private const int WINDOW_ID = 34244;
         private const int PRESET_WINDOW_ID = 34245;
-        private const string TEXT_FIELD_GROUP = "PAMainWindow";
 
         private void Awake()
         {
@@ -78,10 +77,13 @@ namespace PilotAssistant.UI
                     presetWindowRect = GUILayout.Window(PRESET_WINDOW_ID, presetWindowRect, DrawPresetWindow, "Presets",
                                                         GUILayout.Width(200), GUILayout.Height(0));
                 }
+                else
+                    GeneralUI.ClearLocks(PRESET_WINDOW_ID);
             }
             else
             {
-                GeneralUI.ClearLocks(TEXT_FIELD_GROUP);
+                GeneralUI.ClearLocks(WINDOW_ID);
+                GeneralUI.ClearLocks(PRESET_WINDOW_ID);
             }
         }
 
@@ -100,11 +102,8 @@ namespace PilotAssistant.UI
             targetAlt = PilotAssistant.Instance.GetController(PIDList.Altitude).SetPoint;
         }
 
-        private void DrawMainWindow(int id)
+        private void DrawMainWindow(int windowId)
         {
-            // Start a text field group.
-            GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
-
             GUILayout.BeginVertical(GUILayout.Height(0), GUILayout.Width(0), GUILayout.ExpandHeight(true));
             if (PilotAssistant.Instance.IsPaused() && (PilotAssistant.Instance.IsHdgActive() || PilotAssistant.Instance.IsVertActive()))
             {
@@ -119,18 +118,18 @@ namespace PilotAssistant.UI
                                                    GeneralUI.Style(UIStyle.ToggleButton), GUILayout.ExpandWidth(true));
             GUILayout.EndHorizontal();
 
-            DrawHeadingControls();
+            DrawHeadingControls(windowId);
 
-            DrawVerticalControls();
+            DrawVerticalControls(windowId);
 
             // Autolock vessel controls on focus.
-            GeneralUI.AutolockTextFieldGroup(TEXT_FIELD_GROUP, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
+            GeneralUI.AutolockTextFields(windowId, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
 
             GUILayout.EndVertical();
             GUI.DragWindow();
         }
 
-        private void DrawHeadingControls()
+        private void DrawHeadingControls(int windowId)
         {
             bool isHdgActive = PilotAssistant.Instance.IsHdgActive();
             bool isWingLvlActive = PilotAssistant.Instance.IsWingLvlActive();
@@ -160,7 +159,7 @@ namespace PilotAssistant.UI
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Target Hdg: ");
-                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+                GeneralUI.TextFieldNext(windowId);
                 string targetHeadingText = GUILayout.TextField(targetHeading.ToString("F2"), GUILayout.Width(60));
                 try
                 {
@@ -176,18 +175,18 @@ namespace PilotAssistant.UI
             }
             if (!isWingLvlActive)
             {
-                DrawPIDValues(PIDList.HdgBank, "Heading", "\u00B0", flightData.Heading, 2, "Bank", "\u00B0", false, true, false);
-                DrawPIDValues(PIDList.HdgYaw, "Bank => Yaw", "\u00B0", flightData.Yaw, 2, "Yaw", "\u00B0", true, false, false);
+                DrawPIDValues(windowId, PIDList.HdgBank, "Heading", "\u00B0", flightData.Heading, 2, "Bank", "\u00B0", false, true, false);
+                DrawPIDValues(windowId, PIDList.HdgYaw, "Bank => Yaw", "\u00B0", flightData.Yaw, 2, "Yaw", "\u00B0", true, false, false);
             }
             if (showControlSurfaces)
             {
-                DrawPIDValues(PIDList.Aileron, "Bank", "\u00B0", flightData.Roll, 3, "Deflect", "\u00B0", false, true, false);
-                DrawPIDValues(PIDList.Rudder, "Yaw", "\u00B0", flightData.Yaw, 3, "Deflect", "\u00B0", false, true, false);
+                DrawPIDValues(windowId, PIDList.Aileron, "Bank", "\u00B0", flightData.Roll, 3, "Deflect", "\u00B0", false, true, false);
+                DrawPIDValues(windowId, PIDList.Rudder, "Yaw", "\u00B0", flightData.Yaw, 3, "Deflect", "\u00B0", false, true, false);
             }
             GUILayout.EndVertical();
         }
 
-        private void DrawVerticalControls()
+        private void DrawVerticalControls(int windowId)
         {
             bool isVertActive = PilotAssistant.Instance.IsVertActive();
             bool isAltitudeHoldActive = PilotAssistant.Instance.IsAltitudeHoldActive();
@@ -219,7 +218,7 @@ namespace PilotAssistant.UI
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Target Altitude: ");
-                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+                GeneralUI.TextFieldNext(windowId);
                 string targetAltText = GUILayout.TextField(targetAlt.ToString("F1"), GUILayout.Width(60));
                 try
                 {
@@ -237,7 +236,7 @@ namespace PilotAssistant.UI
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Target Speed: ");
-                GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+                GeneralUI.TextFieldNext(windowId);
                 string targetVertText = GUILayout.TextField(targetVert.ToString("F3"), GUILayout.Width(60));
                 try
                 {
@@ -252,18 +251,15 @@ namespace PilotAssistant.UI
                 GUILayout.EndHorizontal();
             }
             if (isAltitudeHoldActive)
-                DrawPIDValues(PIDList.Altitude, "Altitude", "m", flightData.Vessel.altitude, 2, "Speed ", "m/s", true, true, false);
-            DrawPIDValues(PIDList.VertSpeed, "Vertical Speed", "m/s", flightData.Vessel.verticalSpeed, 2, "AoA", "\u00B0", true);
+                DrawPIDValues(windowId, PIDList.Altitude, "Altitude", "m", flightData.Vessel.altitude, 2, "Speed ", "m/s", true, true, false);
+            DrawPIDValues(windowId, PIDList.VertSpeed, "Vertical Speed", "m/s", flightData.Vessel.verticalSpeed, 2, "AoA", "\u00B0", true);
             if (showControlSurfaces)
-                DrawPIDValues(PIDList.Elevator, "Angle of Attack", "\u00B0", flightData.AoA, 3, "Deflect", "\u00B0", true, true, false);
+                DrawPIDValues(windowId, PIDList.Elevator, "Angle of Attack", "\u00B0", flightData.AoA, 3, "Deflect", "\u00B0", true, true, false);
             GUILayout.EndVertical();
         }
 
-        private void DrawPresetWindow(int id)
+        private void DrawPresetWindow(int windowId)
         {
-            // Start a text field group.
-            GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
-
             if (PresetManager.Instance.GetActivePAPreset() != null)
             {
                 PAPreset p = PresetManager.Instance.GetActivePAPreset();
@@ -278,7 +274,7 @@ namespace PilotAssistant.UI
             }
 
             GUILayout.BeginHorizontal();
-            GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+            GeneralUI.TextFieldNext(windowId);
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GUILayout.Width(25)))
             {
@@ -311,12 +307,13 @@ namespace PilotAssistant.UI
             }
 
             // Autolock vessel controls on focus.
-            GeneralUI.AutolockTextFieldGroup(TEXT_FIELD_GROUP, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
+            GeneralUI.AutolockTextFields(windowId, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
 
             GUILayout.EndVertical();
         }
 
         private void DrawPIDValues(
+            int windowId,
             PIDList controllerID,
             string inputName,
             string inputUnits,
@@ -345,10 +342,10 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 GUILayout.BeginVertical();
 
-                controller.PGain  = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kp:", controller.PGain, "F3", 45);
-                controller.IGain  = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Ki:", controller.IGain, "F3", 45);
-                controller.DGain  = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kd:", controller.DGain, "F3", 45);
-                controller.Scalar = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Scalar:", controller.Scalar, "F3", 45);
+                controller.PGain  = GeneralUI.LabPlusNumBox(windowId, "Kp:", controller.PGain, "F3", 45);
+                controller.IGain  = GeneralUI.LabPlusNumBox(windowId, "Ki:", controller.IGain, "F3", 45);
+                controller.DGain  = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.DGain, "F3", 45);
+                controller.Scalar = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.Scalar, "F3", 45);
 
                 if (showPIDLimits)
                 {
@@ -359,23 +356,23 @@ namespace PilotAssistant.UI
 
                     if (!invertOutput)
                     {
-                        controller.OutMax = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, tmpMaxText, controller.OutMax, "F3");
+                        controller.OutMax = GeneralUI.LabPlusNumBox(windowId, tmpMaxText, controller.OutMax, "F3");
                         if (doublesided)
-                            controller.OutMin = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, tmpMinText, controller.OutMin, "F3");
+                            controller.OutMin = GeneralUI.LabPlusNumBox(windowId, tmpMinText, controller.OutMin, "F3");
                         else
                             controller.OutMin = -controller.OutMax;
-                        controller.ClampLower = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "I Clamp Lower:", controller.ClampLower, "F3");
-                        controller.ClampUpper = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "I Clamp Upper:", controller.ClampUpper, "F3");
+                        controller.ClampLower = GeneralUI.LabPlusNumBox(windowId, "I Clamp Lower:", controller.ClampLower, "F3");
+                        controller.ClampUpper = GeneralUI.LabPlusNumBox(windowId, "I Clamp Upper:", controller.ClampUpper, "F3");
                     }
                     else
                     { // used when response * -1 is used to get the correct output
-                        controller.OutMax = -1 * GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, tmpMinText, -controller.OutMax, "F3");
+                        controller.OutMax = -1 * GeneralUI.LabPlusNumBox(windowId, tmpMinText, -controller.OutMax, "F3");
                         if (doublesided)
-                            controller.OutMin = -1 * GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, tmpMaxText, -controller.OutMin, "F3");
+                            controller.OutMin = -1 * GeneralUI.LabPlusNumBox(windowId, tmpMaxText, -controller.OutMin, "F3");
                         else
                             controller.OutMin = -controller.OutMax;
-                        controller.ClampUpper = -1 * GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "I Clamp Lower:", -controller.ClampUpper, "F3");
-                        controller.ClampLower = -1 * GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "I Clamp Upper:", -controller.ClampLower, "F3");
+                        controller.ClampUpper = -1 * GeneralUI.LabPlusNumBox(windowId, "I Clamp Lower:", -controller.ClampUpper, "F3");
+                        controller.ClampLower = -1 * GeneralUI.LabPlusNumBox(windowId, "I Clamp Upper:", -controller.ClampLower, "F3");
                     }
                 }
                 GUILayout.EndVertical();

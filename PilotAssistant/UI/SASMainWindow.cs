@@ -32,7 +32,6 @@ namespace PilotAssistant.UI
 
         private const int WINDOW_ID = 78934856;
         private const int PRESET_WINDOW_ID = 78934857;
-        private const string TEXT_FIELD_GROUP = "SASMainWindow";
 
         private void Awake()
         {
@@ -90,18 +89,18 @@ namespace PilotAssistant.UI
                     presetWindowRect = GUILayout.Window(PRESET_WINDOW_ID, presetWindowRect, DrawPresetWindow, "Presets",
                                                         GUILayout.Width(200), GUILayout.Height(0));
                 }
+                else
+                    GeneralUI.ClearLocks(PRESET_WINDOW_ID);
             }
             else
             {
-                GeneralUI.ClearLocks(TEXT_FIELD_GROUP);
+                GeneralUI.ClearLocks(WINDOW_ID);
+                GeneralUI.ClearLocks(PRESET_WINDOW_ID);
             }
         }
 
-        private void DrawSASWindow(int id)
+        private void DrawSASWindow(int windowId)
         {
-            // Start a text field group.
-            GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
-
             bool isOperational = SurfSAS.Instance.IsSSASOperational() || SurfSAS.Instance.IsStockSASOperational();
             bool isSSASMode = SurfSAS.Instance.IsSSASMode();
             GUILayout.BeginHorizontal();
@@ -138,47 +137,45 @@ namespace PilotAssistant.UI
                 bool tmp2 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Roll);
                 bool tmp3 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Yaw);
                 SurfSAS.Instance.GetController(SASList.Pitch).SetPoint
-                    = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Pitch:", ref tmp1, pitch, 80, 60, 80, -80);
+                    = GeneralUI.TogPlusNumBox(windowId, "Pitch:", ref tmp1, pitch, 80, 60, 80, -80);
                 SurfSAS.Instance.GetController(SASList.Roll).SetPoint
-                    = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Roll:", ref tmp2, roll, 80, 60, 180, -180);
+                    = GeneralUI.TogPlusNumBox(windowId, "Roll:", ref tmp2, roll, 80, 60, 180, -180);
                 SurfSAS.Instance.GetController(SASList.Yaw).SetPoint
-                    = GeneralUI.TogPlusNumBox(TEXT_FIELD_GROUP, "Heading:", ref tmp3, hdg, 80, 60, 360, 0);
+                    = GeneralUI.TogPlusNumBox(windowId, "Heading:", ref tmp3, hdg, 80, 60, 360, 0);
                 SurfSAS.Instance.SetSSASAxisEnabled(SASList.Pitch, tmp1);
                 SurfSAS.Instance.SetSSASAxisEnabled(SASList.Roll, tmp2);
                 SurfSAS.Instance.SetSSASAxisEnabled(SASList.Yaw, tmp3);
 
-                DrawPIDValues(SASList.Pitch, "Pitch");
-                DrawPIDValues(SASList.Roll, "Roll");
-                DrawPIDValues(SASList.Yaw, "Yaw");
+                DrawPIDValues(windowId, SASList.Pitch, "Pitch");
+                DrawPIDValues(windowId, SASList.Roll, "Roll");
+                DrawPIDValues(windowId, SASList.Yaw, "Yaw");
             }
             else
             {
                 FlightData flightData = SurfSAS.Instance.GetFlightData();
                 VesselAutopilot.VesselSAS sas = flightData.Vessel.Autopilot.SAS;
 
-                DrawPIDValues(sas.pidLockedPitch, "Pitch", SASList.Pitch);
-                DrawPIDValues(sas.pidLockedRoll, "Roll", SASList.Roll);
-                DrawPIDValues(sas.pidLockedYaw, "Yaw", SASList.Yaw);
+                DrawPIDValues(windowId, sas.pidLockedPitch, "Pitch", SASList.Pitch);
+                DrawPIDValues(windowId, sas.pidLockedRoll, "Roll", SASList.Roll);
+                DrawPIDValues(windowId, sas.pidLockedYaw, "Yaw", SASList.Yaw);
             }
 
             // Autolock vessel controls on focus.
-            GeneralUI.AutolockTextFieldGroup(TEXT_FIELD_GROUP, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
+            GeneralUI.AutolockTextFields(windowId, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
 
             GUILayout.EndVertical();
             GUI.DragWindow();
         }
 
-        private void DrawPresetWindow(int id)
+        private void DrawPresetWindow(int windowId)
         {
-            // Start a text field group.
-            GeneralUI.StartTextFieldGroup(TEXT_FIELD_GROUP);
             if (SurfSAS.Instance.IsSSASMode())
-                DrawSSASPreset();
+                DrawSSASPreset(windowId);
             else
-                DrawStockPreset();
+                DrawStockPreset(windowId);
         }
 
-        private void DrawSSASPreset()
+        private void DrawSSASPreset(int windowId)
         {
             if (PresetManager.Instance.GetActiveSASPreset() != null)
             {
@@ -194,7 +191,7 @@ namespace PilotAssistant.UI
             }
 
             GUILayout.BeginHorizontal();
-            GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+            GeneralUI.TextFieldNext(windowId);
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GUILayout.Width(25)))
             {
@@ -226,12 +223,12 @@ namespace PilotAssistant.UI
                 GUILayout.EndHorizontal();
             }
             // Autolock vessel controls on focus.
-            GeneralUI.AutolockTextFieldGroup(TEXT_FIELD_GROUP, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
+            GeneralUI.AutolockTextFields(windowId, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
 
             GUILayout.EndVertical();
         }
 
-        private void DrawStockPreset()
+        private void DrawStockPreset(int windowId)
         {
             if (PresetManager.Instance.GetActiveStockSASPreset() != null)
             {
@@ -247,7 +244,7 @@ namespace PilotAssistant.UI
             }
 
             GUILayout.BeginHorizontal();
-            GeneralUI.TextFieldNext(TEXT_FIELD_GROUP);
+            GeneralUI.TextFieldNext(windowId);
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+",  GUILayout.Width(25)))
             {
@@ -279,12 +276,12 @@ namespace PilotAssistant.UI
                 GUILayout.EndHorizontal();
             }
             // Autolock vessel controls on focus.
-            GeneralUI.AutolockTextFieldGroup(TEXT_FIELD_GROUP, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
+            GeneralUI.AutolockTextFields(windowId, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
 
             GUILayout.EndVertical();
         }
 
-        private void DrawPIDValues(SASList controllerID, string inputName)
+        private void DrawPIDValues(int windowId, SASList controllerID, string inputName)
         {
             PID.PID_Controller controller = SurfSAS.Instance.GetController(controllerID);
             if (GUILayout.Button(inputName, GUILayout.ExpandWidth(true)))
@@ -292,14 +289,14 @@ namespace PilotAssistant.UI
 
             if (ssasPidDisplay[(int)controllerID])
             {
-                controller.PGain = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kp:", controller.PGain, "F3", 45);
-                controller.IGain = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Ki:", controller.IGain, "F3", 45);
-                controller.DGain = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kd:", controller.DGain, "F3", 45);
-                controller.Scalar = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Scalar:", controller.Scalar, "F3", 45);
+                controller.PGain = GeneralUI.LabPlusNumBox(windowId, "Kp:", controller.PGain, "F3", 45);
+                controller.IGain = GeneralUI.LabPlusNumBox(windowId, "Ki:", controller.IGain, "F3", 45);
+                controller.DGain = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.DGain, "F3", 45);
+                controller.Scalar = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.Scalar, "F3", 45);
             }
         }
 
-        private void DrawPIDValues(PIDclamp controller, string inputName, SASList id)
+        private void DrawPIDValues(int windowId, PIDclamp controller, string inputName, SASList id)
         {
             if (GUILayout.Button(inputName, GUILayout.ExpandWidth(true)))
             {
@@ -308,10 +305,10 @@ namespace PilotAssistant.UI
 
             if (stockPidDisplay[(int)id])
             {
-                controller.kp = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kp:", controller.kp, "F3", 45);
-                controller.ki = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Ki:", controller.ki, "F3", 45);
-                controller.kd = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Kd:", controller.kd, "F3", 45);
-                controller.clamp = GeneralUI.LabPlusNumBox(TEXT_FIELD_GROUP, "Scalar:", controller.clamp, "F3", 45);
+                controller.kp = GeneralUI.LabPlusNumBox(windowId, "Kp:", controller.kp, "F3", 45);
+                controller.ki = GeneralUI.LabPlusNumBox(windowId, "Ki:", controller.ki, "F3", 45);
+                controller.kd = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.kd, "F3", 45);
+                controller.clamp = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.clamp, "F3", 45);
             }
         }
     }

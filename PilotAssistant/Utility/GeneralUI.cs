@@ -50,65 +50,56 @@ namespace PilotAssistant.Utility
             public bool locked;
         }
 
-        // A map from text field group name to text field group state. 
-        private static Dictionary<string, TextFieldGroupState> textFieldGroups = new Dictionary<string, TextFieldGroupState>();
-
-        // Begin a new text field group, sets the counter to zero
-        public static void StartTextFieldGroup(string groupName)
-        {
-            TextFieldGroupState st = null;
-            if (textFieldGroups.TryGetValue(groupName, out st))
-                st.counter = 0;
-            else
-                textFieldGroups[groupName] = new TextFieldGroupState();
-        }
+        // A map from window id to text field group state.
+        private static Dictionary<int, TextFieldGroupState> textFieldGroups = new Dictionary<int, TextFieldGroupState>();
 
         // Mark the next control as a text field. Actually any control which we want to lock input for.
-        public static void TextFieldNext(string groupName)
+        public static void TextFieldNext(int windowId)
         {
             TextFieldGroupState st = null;
-            if (textFieldGroups.TryGetValue(groupName, out st))
-            {
-                // st.counter used so names are unique.
-                GUI.SetNextControlName("IMPORTANT_TEXTFIELD_" + groupName + st.counter);
-                ++st.counter;
-            }
+            if (!textFieldGroups.TryGetValue(windowId, out st))
+                st = textFieldGroups[windowId] = new TextFieldGroupState();
+
+            // st.counter used so names are unique.
+            GUI.SetNextControlName("IMPORTANT_TEXTFIELD_" + windowId + "_" + st.counter);
+            ++st.counter;
         }
 
-        // Mark the end of the text field group, automatically lock if any control has focus. 
-        public static bool AutolockTextFieldGroup(string groupName, ControlTypes mask)
+        // Mark the end of the text fields, automatically lock if any control has focus.
+        public static bool AutolockTextFields(int windowId, ControlTypes mask)
         {
             TextFieldGroupState st = null;
-            if (textFieldGroups.TryGetValue(groupName, out st))
+            if (textFieldGroups.TryGetValue(windowId, out st))
             {
                 string name = GUI.GetNameOfFocusedControl();
-                bool focus = name.StartsWith("IMPORTANT_TEXTFIELD_" + groupName);
+                bool focus = name.StartsWith("IMPORTANT_TEXTFIELD_" + windowId + "_");
                 if (focus && !st.locked)
                 {
                     st.locked = true;
-                    InputLockManager.SetControlLock(mask, groupName + "_ControlLock");
+                    InputLockManager.SetControlLock(mask, windowId + "_ControlLock");
                 }
                 else if (!focus && st.locked)
                 {
                     st.locked = false;
-                    InputLockManager.RemoveControlLock(groupName + "_ControlLock");
+                    InputLockManager.RemoveControlLock(windowId + "_ControlLock");
                 }
+                st.counter = 0;
                 return st.locked;
             }
             return false;
         }
 
-        // Clear the lock for a specific text field group
-        public static void ClearLocks(string groupName)
+        // Clear the lock for a specific window id
+        public static void ClearLocks(int windowId)
         {
             TextFieldGroupState st = null;
-            if (textFieldGroups.TryGetValue(groupName, out st))
+            if (textFieldGroups.TryGetValue(windowId, out st))
             {
                 st.counter = 0;
                 if (st.locked)
                 {
                     st.locked = false;
-                    InputLockManager.RemoveControlLock(groupName + "_ControlLock");
+                    InputLockManager.RemoveControlLock(windowId + "_ControlLock");
                 }
             }
         }
@@ -204,14 +195,14 @@ namespace PilotAssistant.Utility
         /// Draws a label and text box of specified widths with +/- 10% increment buttons. Returns the numeric value of
         /// the text box.
         /// </summary>
-        /// <param name="textFieldGroup">The text field group the input box should have.</param>
+        /// <param name="windowId">The window id the input box belongs to.</param>
         /// <param name="labelText">text for the label</param>
         /// <param name="boxVal">number to display in text box</param>
         /// <param name="labelWidth"></param>
         /// <param name="boxWidth"></param>
         /// <returns>edited value of the text box</returns>
         public static double LabPlusNumBox(
-            string textFieldGroup,
+            int windowId,
             string labelText,
             double boxVal,
             string format,
@@ -222,7 +213,7 @@ namespace PilotAssistant.Utility
             GUILayout.BeginHorizontal();
 
             GUILayout.Label(labelText, Style(UIStyle.SpinnerLabel), GUILayout.Width(labelWidth));
-            GeneralUI.TextFieldNext(textFieldGroup);
+            GeneralUI.TextFieldNext(windowId);
             string text = GUILayout.TextField(boxText, Style(UIStyle.NumBoxText), GUILayout.Width(boxWidth));
             try
             {
@@ -250,7 +241,7 @@ namespace PilotAssistant.Utility
         /// Draws a label and text box of specified widths with +/- 1 increment buttons. Returns the numeric value of
         /// the text box
         /// </summary>
-        /// <param name="textFieldGroup">The text field group the input box should have.</param>
+        /// <param name="windowId">The window id the input box belongs to.</param>
         /// <param name="toggleText"></param>
         /// <param name="boxVal"></param>
         /// <param name="toggleWidth"></param>
@@ -261,7 +252,7 @@ namespace PilotAssistant.Utility
         /// upper</param>
         /// <returns></returns>
         public static double TogPlusNumBox(
-            string textFieldGroup,
+            int windowId,
             string toggleText,
             ref bool toggleState,
             double boxVal,
@@ -273,7 +264,7 @@ namespace PilotAssistant.Utility
             GUILayout.BeginHorizontal();
             // state is returned by reference
             toggleState = GUILayout.Toggle(toggleState, toggleText, Style(UIStyle.ToggleButton), GUILayout.Width(toggleWidth));
-            GeneralUI.TextFieldNext(textFieldGroup);
+            GeneralUI.TextFieldNext(windowId);
             string text = GUILayout.TextField(boxVal.ToString("F2"), Style(UIStyle.NumBoxText), GUILayout.Width(boxWidth));
             try
             {
