@@ -309,13 +309,13 @@ namespace PilotAssistant
                 {
                     isPaused = false;
                     SurfSAS.Instance.SetOperational(false);
-                    Messaging.PostMessage("Pilot assistant unpaused.");
+                    GeneralUI.PostMessage("Pilot assistant unpaused.");
                 }
                 // Otherwise, when active and not paused, pause.
                 else if (IsHdgActive() || IsVertActive())
                 {
                     isPaused = true;
-                    Messaging.PostMessage("Pilot assistant paused.");
+                    GeneralUI.PostMessage("Pilot assistant paused.");
                 }
             }
 
@@ -324,9 +324,9 @@ namespace PilotAssistant
                 && !isPaused && (IsHdgActive() || IsVertActive()))
             {
                 if (SASCheck())
-                    Messaging.PostMessage("Pilot Assistant control handed to SAS.");
+                    GeneralUI.PostMessage("Pilot Assistant control handed to SAS.");
                 else
-                    Messaging.PostMessage("Pilot Assistant control retrieved from SAS.");
+                    GeneralUI.PostMessage("Pilot Assistant control retrieved from SAS.");
             }
 
             // Level wings and set vertical speed to 0.
@@ -342,7 +342,7 @@ namespace PilotAssistant
                 // Make sure we are not paused and SAS is off.
                 isPaused = false;
                 SurfSAS.Instance.SetOperational(false);
-                Messaging.PostMessage("Pilot Assistant is levelling off.");
+                GeneralUI.PostMessage("Pilot Assistant is levelling off.");
             }
 
             // Only update target when not paused.

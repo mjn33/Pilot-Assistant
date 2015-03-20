@@ -104,6 +104,11 @@ namespace PilotAssistant.Utility
             }
         }
 
+        public static void PostMessage(string msg)
+        {
+            ScreenMessages.PostScreenMessage(new ScreenMessage(msg, 3, ScreenMessageStyle.UPPER_RIGHT));
+        }
+
         private static void EnsureSkinInitialized()
         {
             if (skin != null)
