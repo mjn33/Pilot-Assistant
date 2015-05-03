@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace PilotAssistant.Presets
 {
+    using PID;
     using UI;
     using Utility;
 
@@ -19,15 +20,8 @@ namespace PilotAssistant.Presets
             get { return instance; }
         }
 
-        private PAPreset defaultPATuning = null;
         private List<PAPreset> paPresetList = new List<PAPreset>();
-        private PAPreset activePAPreset = null;
-
-        private SASPreset defaultSASTuning;
-        private SASPreset defaultStockSASTuning;
         private List<SASPreset> sasPresetList = new List<SASPreset>();
-        private SASPreset activeSASPreset = null;
-        private SASPreset activeStockSASPreset = null;
 
         public void Awake()
         {
@@ -84,148 +78,70 @@ namespace PilotAssistant.Presets
             node.Save(KSPUtil.ApplicationRootPath.Replace("\\", "/") + "GameData/Pilot Assistant/Presets.cfg");
         }
 
-        public void InitDefaultStockSASTuning(VesselAutopilot.VesselSAS sas)
-        {
-            defaultStockSASTuning = new SASPreset(sas, "Stock");
-            if (activeStockSASPreset == null)
-                activeStockSASPreset = defaultStockSASTuning;
-            else if (activeStockSASPreset != defaultStockSASTuning)
-                LoadStockSASPreset(sas, activeStockSASPreset);
-        }
-
-        public void InitDefaultSASTuning(PID.PID_Controller[] controllers)
-        {
-            defaultSASTuning = new SASPreset(controllers, "Default");
-            if (activeSASPreset == null)
-                activeSASPreset = defaultSASTuning;
-            else if (activeSASPreset != defaultSASTuning)
-                LoadSASPreset(controllers, activeSASPreset);
-        }
-
-        public void InitDefaultPATuning(PID.PID_Controller[] controllers)
-        {
-            defaultPATuning = new PAPreset(controllers, "Default");
-            if (activePAPreset == null)
-                activePAPreset = defaultPATuning;
-            else if (activePAPreset != defaultPATuning)
-                LoadPAPreset(controllers, activePAPreset);
-        }
-
-        public SASPreset GetActiveStockSASPreset()
-        {
-            return activeStockSASPreset;
-        }
-
-        public SASPreset GetActiveSASPreset()
-        {
-            return activeSASPreset;
-        }
-
-        public PAPreset GetActivePAPreset()
-        {
-            return activePAPreset;
-        }
-
-        public SASPreset GetDefaultStockSASTuning()
-        {
-            return defaultStockSASTuning;
-        }
-
-        public SASPreset GetDefaultSASTuning()
-        {
-            return defaultSASTuning;
-        }
-
-        public PAPreset GetDefaultPATuning()
-        {
-            return defaultPATuning;
-        }
-
-        public void RegisterStockSASPreset(VesselAutopilot.VesselSAS sas, string name)
+        public SASPreset RegisterStockSASPreset(string name, VesselAutopilot.VesselSAS sas)
         {
             if (name == "")
             {
                 GeneralUI.PostMessage("Failed to add preset with no name.");
-                return;
+                return null;
             }
             foreach (SASPreset p in sasPresetList)
             {
-                if (name == p.GetName())
+                if (name == p.Name)
                 {
                     GeneralUI.PostMessage("Failed to add preset with duplicate name.");
-                    return;
+                    return null;
                 }
             }
 
-            SASPreset p2 = new SASPreset(sas, name);
+            SASPreset p2 = new SASPreset(name, sas);
             sasPresetList.Add(p2);
-            LoadStockSASPreset(sas, p2);
             SavePresetsToFile();
+            return p2;
         }
 
-        public void RegisterSASPreset(PID.PID_Controller[] controllers, string name)
+        public SASPreset RegisterSSASPreset(string name, PID_Controller[] controllers)
         {
             if (name == "")
             {
                 GeneralUI.PostMessage("Failed to add preset with no name.");
-                return;
+                return null;
             }
             foreach (SASPreset p in sasPresetList)
             {
-                if (name == p.GetName())
+                if (name == p.Name)
                 {
                     GeneralUI.PostMessage("Failed to add preset with duplicate name.");
-                    return;
+                    return null;
                 }
             }
 
-            SASPreset p2 = new SASPreset(controllers, name);
+            SASPreset p2 = new SASPreset(name, controllers);
             sasPresetList.Add(p2);
-            LoadSASPreset(controllers, p2);
             SavePresetsToFile();
+            return p2;
         }
 
-        public void RegisterPAPreset(PID.PID_Controller[] controllers, string name)
+        public PAPreset RegisterPAPreset(string name, PID_Controller[] controllers)
         {
             if (name == "")
             {
                 GeneralUI.PostMessage("Failed to add preset with no name.");
-                return;
+                return null;
             }
             foreach (PAPreset p in paPresetList)
             {
-                if (name == p.GetName())
+                if (name == p.Name)
                 {
                     GeneralUI.PostMessage("Failed to add preset with duplicate name.");
-                    return;
+                    return null;
                 }
             }
 
-            PAPreset p2 = new PAPreset(controllers, name);
+            PAPreset p2 = new PAPreset(name, controllers);
             paPresetList.Add(p2);
-            LoadPAPreset(controllers, p2);
             SavePresetsToFile();
-        }
-
-        public void LoadStockSASPreset(VesselAutopilot.VesselSAS sas, SASPreset p)
-        {
-            activeStockSASPreset = p;
-            p.LoadStockPreset(sas);
-            GeneralUI.PostMessage("Loaded preset \"" + p.GetName() + "\"");
-        }
-
-        public void LoadSASPreset(PID.PID_Controller[] controllers, SASPreset p)
-        {
-            activeSASPreset = p;
-            p.LoadPreset(controllers);
-            GeneralUI.PostMessage("Loaded preset \"" + p.GetName() + "\"");
-        }
-
-        public void LoadPAPreset(PID.PID_Controller[] controllers, PAPreset p)
-        {
-            activePAPreset = p;
-            p.LoadPreset(controllers);
-            GeneralUI.PostMessage("Loaded preset \"" + p.GetName() + "\"");
+            return p2;
         }
 
         public List<SASPreset> GetAllSASPresets()
@@ -234,7 +150,7 @@ namespace PilotAssistant.Presets
             List<SASPreset> l = new List<SASPreset>();
             foreach (SASPreset p in sasPresetList)
             {
-                if (!p.IsStockSAS())
+                if (!p.IsStockPreset)
                     l.Add(p);
             }
             return l;
@@ -245,7 +161,7 @@ namespace PilotAssistant.Presets
             List<SASPreset> l = new List<SASPreset>();
             foreach (SASPreset p in sasPresetList)
             {
-                if (p.IsStockSAS())
+                if (p.IsStockPreset)
                     l.Add(p);
             }
             return l;
@@ -259,26 +175,12 @@ namespace PilotAssistant.Presets
 
         public void RemovePreset(SASPreset p)
         {
-            if (p.IsStockSAS())
-            {
-                if (activeStockSASPreset == p)
-                    activeStockSASPreset = null;
-                sasPresetList.Remove(p);
-                SavePresetsToFile();
-            }
-            else
-            {
-                if (activeSASPreset == p)
-                    activeSASPreset = null;
-                sasPresetList.Remove(p);
-                SavePresetsToFile();
-            }
+            sasPresetList.Remove(p);
+            SavePresetsToFile();
         }
 
         public void RemovePreset(PAPreset p)
         {
-            if (activePAPreset == p)
-                activePAPreset = null;
             paPresetList.Remove(p);
             SavePresetsToFile();
         }

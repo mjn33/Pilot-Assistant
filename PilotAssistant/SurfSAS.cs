@@ -26,6 +26,12 @@ namespace PilotAssistant
             get { return instance; }
         }
 
+        private SASPreset defaultSSASPreset;
+        private SASPreset defaultStockPreset;
+
+        private SASPreset activeSSASPreset = null;
+        private SASPreset activeStockPreset = null;
+
         private FlightData flightData;
         private PID_Controller[] controllers = new PID_Controller[3];
 
@@ -79,17 +85,23 @@ namespace PilotAssistant
         {
             flightData = new FlightData(FlightGlobals.ActiveVessel);
 
-            // grab stock PID values
-            PID_Controller pitch = new PID.PID_Controller(0.15, 0.0, 0.06, -1, 1, -0.2, 0.2, 3);
-            PID_Controller roll = new PID.PID_Controller(0.1, 0.0, 0.06, -1, 1, -0.2, 0.2, 3);
-            PID_Controller yaw = new PID.PID_Controller(0.15, 0.0, 0.06, -1, 1, -0.2, 0.2, 3);
-            controllers[(int)SASList.Pitch] = pitch;
-            controllers[(int)SASList.Roll] = roll;
-            controllers[(int)SASList.Yaw] = yaw;
+            // Initializing default SSAS preset
+            PID_Tuning[] tunings = new PID_Tuning[Enum.GetNames(typeof(SASList)).Length];
+            tunings[(int)SASList.Pitch] = new PID_Tuning(0.15, 0.0, 0.06, -1, 1, -0.2, 0.2, 3);
+            tunings[(int)SASList.Roll]  = new PID_Tuning(0.1,  0.0, 0.06, -1, 1, -0.2, 0.2, 3);
+            tunings[(int)SASList.Yaw]   = new PID_Tuning(0.15, 0.0, 0.06, -1, 1, -0.2, 0.2, 3);
+            defaultSSASPreset = new SASPreset("Default", tunings);
+            activeSSASPreset = defaultSSASPreset;
 
-            // Set up a default preset that can be easily returned to
-            PresetManager.Instance.InitDefaultSASTuning(controllers);
-            PresetManager.Instance.InitDefaultStockSASTuning(flightData.Vessel.Autopilot.SAS);
+            // Initializing controllers from preset
+            foreach (SASList id in Enum.GetValues(typeof(SASList)))
+            {
+                controllers[(int)id] = new PID_Controller(flightData.Vessel, tunings[(int)id]);
+            }
+
+            // grab stock PID values
+            defaultStockPreset = new SASPreset("Stock", flightData.Vessel.Autopilot.SAS);
+            activeStockPreset = defaultStockPreset;
 
             axisState[(int)SASList.Pitch] = new AxisState(20, 10, 75);
             axisState[(int)SASList.Roll] = new AxisState(20, 10, 75);
@@ -126,7 +138,8 @@ namespace PilotAssistant
             if (ssasMode)
                 flightData.Vessel.ActionGroups[KSPActionGroup.SAS] = false;
 
-            if (ssasMode && flightData.Vessel.staticPressure == 0)
+            double staticPressure = flightData.Vessel.mainBody.GetPressure(flightData.Vessel.altitude);
+            if (ssasMode && staticPressure < 1)
             {
                 // Try to seamlessly switch to stock SAS
                 ToggleSSASMode();
@@ -267,7 +280,7 @@ namespace PilotAssistant
                     if (!rollStateWas)
                     {
                         GetController(SASList.Roll).SetPoint = 0;
-                        GetController(SASList.Roll).SkipDerivative = true;
+                        GetController(SASList.Roll).SkipDerivative();
                         rollTarget = flightData.Vessel.ReferenceTransform.right;
                     }
 
@@ -283,7 +296,7 @@ namespace PilotAssistant
                     if (rollStateWas)
                     {
                         GetController(SASList.Roll).SetPoint = flightData.Roll;
-                        GetController(SASList.Roll).SkipDerivative = true;
+                        GetController(SASList.Roll).SkipDerivative();
                     }
 
                     double rollResponse = GetController(SASList.Roll).Response(
@@ -380,41 +393,43 @@ namespace PilotAssistant
             state.activationTimeElapsed = 0;
         }
 
-        public void UpdatePreset()
-        {
-            SASPreset p = PresetManager.Instance.GetActiveSASPreset();
-            if (p != null)
-                p.Update(controllers);
-            PresetManager.Instance.SavePresetsToFile();
-        }
+        // public void UpdatePreset()
+        // {
+        //     SASPreset p = activeSSASPreset;
+        //     if (p != null)
+        //         p.Update(controllers);
+        //     PresetManager.Instance.SavePresetsToFile();
+        // }
 
-        public void RegisterNewPreset(string name)
-        {
-            PresetManager.Instance.RegisterSASPreset(controllers, name);
-        }
+        // // TODO: Remove this?
+        // public void RegisterNewPreset(string name)
+        // {
+        //     PresetManager.Instance.RegisterSASPreset(name, controllers);
+        // }
 
-        public void LoadPreset(SASPreset p)
-        {
-            PresetManager.Instance.LoadSASPreset(controllers, p);
-        }
+        // public void LoadPreset(SASPreset p)
+        // {
+        //     PresetManager.Instance.LoadSASPreset(controllers, p);
+        // }
 
-        public void UpdateStockPreset()
-        {
-            SASPreset p = PresetManager.Instance.GetActiveStockSASPreset();
-            if (p != null)
-                p.UpdateStock(flightData.Vessel.Autopilot.SAS);
-            PresetManager.Instance.SavePresetsToFile();
-        }
+        // public void UpdateStockPreset()
+        // {
+        //     SASPreset p = activeStockPreset;
+        //     if (p != null)
+        //         p.UpdateStock(flightData.Vessel.Autopilot.SAS);
+        //     PresetManager.Instance.SavePresetsToFile();
+        // }
 
-        public void RegisterNewStockPreset(string name)
-        {
-            PresetManager.Instance.RegisterStockSASPreset(flightData.Vessel.Autopilot.SAS, name);
-        }
+        // // TODO: Remove this?
+        // public void RegisterNewStockPreset(string name)
+        // {
+        //     PresetManager.Instance.RegisterStockSASPreset(name, flightData.Vessel.Autopilot.SAS);
+        // }
 
-        public void LoadStockPreset(SASPreset p)
-        {
-            PresetManager.Instance.LoadStockSASPreset(flightData.Vessel.Autopilot.SAS, p);
-        }
+        // public void LoadStockPreset(SASPreset p)
+        // {
+        //     PresetManager.Instance.LoadStockSASPreset(flightData.Vessel.Autopilot.SAS, p);
+        // }
 
         public void UpdateTarget()
         {
@@ -471,6 +486,48 @@ namespace PilotAssistant
                     ResetActivationFade(SASList.Roll);
                 }
             }
+        }
+
+        public SASPreset ActiveStockPreset
+        {
+            get { return activeStockPreset; }
+            set
+            {
+                if (!value.IsStockPreset)
+                    throw new ArgumentException("SSAS preset set where stock preset expected.");
+                activeStockPreset = value;
+            }
+        }
+
+        public SASPreset ActiveSSASPreset
+        {
+            get { return activeSSASPreset; }
+            set
+            {
+                if (value.IsStockPreset)
+                    throw new ArgumentException("Stock preset set where SSAS preset expected.");
+                activeSSASPreset = value;
+            }
+        }
+
+        public SASPreset DefaultStockPreset
+        {
+            get { return defaultStockPreset; }
+        }
+
+        public SASPreset DefaultSSASPreset
+        {
+            get { return defaultSSASPreset; }
+        }
+
+        public PID_Controller[] Controllers
+        {
+            get { return controllers; }
+        }
+
+        public FlightData FlightData
+        {
+            get { return flightData; }
         }
     }
 }

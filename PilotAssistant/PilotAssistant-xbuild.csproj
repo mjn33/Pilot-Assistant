@@ -52,6 +52,7 @@
     <Compile Include="AppLauncherFlight.cs" />
     <Compile Include="SurfSAS.cs" />
     <Compile Include="PID\PID_Controller.cs" />
+    <Compile Include="PID\PID_Tuning.cs" />
     <Compile Include="PilotAssistant.cs" />
     <Compile Include="Presets\PAPreset.cs" />
     <Compile Include="Presets\PresetManager.cs" />

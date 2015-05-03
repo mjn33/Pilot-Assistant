@@ -7,71 +7,72 @@ namespace PilotAssistant.Presets
 {
     using PID;
     /// <summary>
-    /// Holds all the PID tuning values for the 7 (or more if required) controllers involved.
+    /// Holds all the PID tuning values for the PilotAssistant controllers.
     /// </summary>
     public class PAPreset
     {
         private string name;
-        private double[][] pidGains = new double[7][];
+        private PID_Tuning[] tunings = new PID_Tuning[Enum.GetNames(typeof(PIDList)).Length];
 
-        public PAPreset(PID_Controller[] controllers, string name) // used for adding a new preset, can clone the current values
+        // Create a preset from an array of PID_Tunings
+        public PAPreset(string name, PID_Tuning[] tunings)
         {
             this.name = name;
-            for (int i = 0; i < pidGains.Length; i++)
-            {
-                double[] gains = new double[8];
-                gains[0] = controllers[i].PGain;
-                gains[1] = controllers[i].IGain;
-                gains[2] = controllers[i].DGain;
-                gains[3] = controllers[i].OutMin;
-                gains[4] = controllers[i].OutMax;
-                gains[5] = controllers[i].ClampLower;
-                gains[6] = controllers[i].ClampUpper;
-                gains[7] = controllers[i].Scalar;
-
-                pidGains[i] = gains;
-            }
+            for (int i = 0; i < tunings.Length; i++)
+                this.tunings[i] = new PID_Tuning(tunings[i]);
         }
 
+        // Create a preset using the PID_Tunings from an array of PID_Controllers
+        public PAPreset(string name, PID_Controller[] controllers)
+        {
+            this.name = name;
+            for (int i = 0; i < tunings.Length; i++)
+                this.tunings[i] = new PID_Tuning(controllers[i].Tuning);
+        }
+
+        // Create a preset using values written previous to a ConfigNode
         public PAPreset(ConfigNode node)
         {
             name = node.GetValue("name");
-            pidGains[(int)PIDList.HdgBank]   = LoadControllerGains(node.GetNode("HdgBankController"));
-            pidGains[(int)PIDList.HdgYaw]    = LoadControllerGains(node.GetNode("HdgYawController"));
-            pidGains[(int)PIDList.Aileron]   = LoadControllerGains(node.GetNode("AileronController"));
-            pidGains[(int)PIDList.Rudder]    = LoadControllerGains(node.GetNode("RudderController"));
-            pidGains[(int)PIDList.Altitude]  = LoadControllerGains(node.GetNode("AltitudeController"));
-            pidGains[(int)PIDList.VertSpeed] = LoadControllerGains(node.GetNode("AoAController"));
-            pidGains[(int)PIDList.Elevator]  = LoadControllerGains(node.GetNode("ElevatorController"));
+            tunings[(int)PIDList.HdgBank]   = LoadControllerGains(node.GetNode("HdgBankController"));
+            tunings[(int)PIDList.HdgYaw]    = LoadControllerGains(node.GetNode("HdgYawController"));
+            tunings[(int)PIDList.Aileron]   = LoadControllerGains(node.GetNode("AileronController"));
+            tunings[(int)PIDList.Rudder]    = LoadControllerGains(node.GetNode("RudderController"));
+            tunings[(int)PIDList.Altitude]  = LoadControllerGains(node.GetNode("AltitudeController"));
+            tunings[(int)PIDList.VertSpeed] = LoadControllerGains(node.GetNode("AoAController"));
+            tunings[(int)PIDList.Elevator]  = LoadControllerGains(node.GetNode("ElevatorController"));
         }
 
-        public string GetName() { return name; }
-
-        private double[] LoadControllerGains(ConfigNode node)
+        public string Name
         {
-            double[] gains = new double[8];
-            double.TryParse(node.GetValue("PGain"), out gains[0]);
-            double.TryParse(node.GetValue("IGain"), out gains[1]);
-            double.TryParse(node.GetValue("DGain"), out gains[2]);
-            double.TryParse(node.GetValue("MinOut"), out gains[3]);
-            double.TryParse(node.GetValue("MaxOut"), out gains[4]);
-            double.TryParse(node.GetValue("ClampLower"), out gains[5]);
-            double.TryParse(node.GetValue("ClampUpper"), out gains[6]);
-            double.TryParse(node.GetValue("Scalar"), out gains[7]);
-            return gains;
+            get { return name; }
         }
 
-        private ConfigNode GainsToConfigNode(string name, double[] gains)
+        private PID_Tuning LoadControllerGains(ConfigNode node)
+        {
+            double kp, ki, kd, outMin, outMax, clampLower, clampUpper, scale;
+            double.TryParse(node.GetValue("PGain"), out kp);
+            double.TryParse(node.GetValue("IGain"), out ki);
+            double.TryParse(node.GetValue("DGain"), out kd);
+            double.TryParse(node.GetValue("OutMin"), out outMin);
+            double.TryParse(node.GetValue("OutMax"), out outMax);
+            double.TryParse(node.GetValue("ClampLower"), out clampLower);
+            double.TryParse(node.GetValue("ClampUpper"), out clampUpper);
+            double.TryParse(node.GetValue("Scale"), out scale);
+            return new PID_Tuning(kp, ki, kd, outMin, outMax, clampLower, clampUpper, scale);
+        }
+
+        private ConfigNode GainsToConfigNode(string name, PID_Tuning tuning)
         {
             ConfigNode node = new ConfigNode(name);
-            node.AddValue("PGain", gains[0]);
-            node.AddValue("IGain", gains[1]);
-            node.AddValue("DGain", gains[2]);
-            node.AddValue("MinOut", gains[3]);
-            node.AddValue("MaxOut", gains[4]);
-            node.AddValue("ClampLower", gains[5]);
-            node.AddValue("ClampUpper", gains[6]);
-            node.AddValue("Scalar", gains[7]);
+            node.AddValue("PGain", tuning.PGain);
+            node.AddValue("IGain", tuning.IGain);
+            node.AddValue("DGain", tuning.DGain);
+            node.AddValue("OutMin", tuning.OutMin);
+            node.AddValue("OutMax", tuning.OutMax);
+            node.AddValue("ClampLower", tuning.ClampLower);
+            node.AddValue("ClampUpper", tuning.ClampUpper);
+            node.AddValue("Scale", tuning.Scale);
             return node;
         }
 
@@ -79,46 +80,43 @@ namespace PilotAssistant.Presets
         {
             ConfigNode node = new ConfigNode("PAPreset");
             node.AddValue("name", name);
-            node.AddNode(GainsToConfigNode("HdgBankController",  pidGains[(int)PIDList.HdgBank]));
-            node.AddNode(GainsToConfigNode("HdgYawController",   pidGains[(int)PIDList.HdgYaw]));
-            node.AddNode(GainsToConfigNode("AileronController",  pidGains[(int)PIDList.Aileron]));
-            node.AddNode(GainsToConfigNode("RudderController",   pidGains[(int)PIDList.Rudder]));
-            node.AddNode(GainsToConfigNode("AltitudeController", pidGains[(int)PIDList.Altitude]));
-            node.AddNode(GainsToConfigNode("AoAController",      pidGains[(int)PIDList.VertSpeed]));
-            node.AddNode(GainsToConfigNode("ElevatorController", pidGains[(int)PIDList.Elevator]));
+            node.AddNode(GainsToConfigNode("HdgBankController",  tunings[(int)PIDList.HdgBank]));
+            node.AddNode(GainsToConfigNode("HdgYawController",   tunings[(int)PIDList.HdgYaw]));
+            node.AddNode(GainsToConfigNode("AileronController",  tunings[(int)PIDList.Aileron]));
+            node.AddNode(GainsToConfigNode("RudderController",   tunings[(int)PIDList.Rudder]));
+            node.AddNode(GainsToConfigNode("AltitudeController", tunings[(int)PIDList.Altitude]));
+            node.AddNode(GainsToConfigNode("AoAController",      tunings[(int)PIDList.VertSpeed]));
+            node.AddNode(GainsToConfigNode("ElevatorController", tunings[(int)PIDList.Elevator]));
             return node;
         }
 
         public void LoadPreset(PID_Controller[] controllers)
         {
-            for (int i = 0; i < pidGains.Length; i++)
+            for (int i = 0; i < tunings.Length; i++)
             {
-                controllers[i].PGain = pidGains[i][0];
-                controllers[i].IGain = pidGains[i][1];
-                controllers[i].DGain = pidGains[i][2];
-                controllers[i].OutMin = pidGains[i][3];
-                controllers[i].OutMax = pidGains[i][4];
-                controllers[i].ClampLower = pidGains[i][5];
-                controllers[i].ClampUpper = pidGains[i][6];
-                controllers[i].Scalar = pidGains[i][7];
+                controllers[i].Tuning.PGain      = tunings[i].PGain;
+                controllers[i].Tuning.IGain      = tunings[i].IGain;
+                controllers[i].Tuning.DGain      = tunings[i].DGain;
+                controllers[i].Tuning.OutMin     = tunings[i].OutMin;
+                controllers[i].Tuning.OutMax     = tunings[i].OutMax;
+                controllers[i].Tuning.ClampLower = tunings[i].ClampLower;
+                controllers[i].Tuning.ClampUpper = tunings[i].ClampUpper;
+                controllers[i].Tuning.Scale      = tunings[i].Scale;
             }
         }
 
         public void Update(PID_Controller[] controllers)
         {
-            for (int i = 0; i < pidGains.Length; i++)
+            for (int i = 0; i < tunings.Length; i++)
             {
-                double[] gains = new double[8];
-                gains[0] = controllers[i].PGain;
-                gains[1] = controllers[i].IGain;
-                gains[2] = controllers[i].DGain;
-                gains[3] = controllers[i].OutMin;
-                gains[4] = controllers[i].OutMax;
-                gains[5] = controllers[i].ClampLower;
-                gains[6] = controllers[i].ClampUpper;
-                gains[7] = controllers[i].Scalar;
-
-                pidGains[i] = gains;
+                tunings[i].PGain      = controllers[i].Tuning.PGain;
+                tunings[i].IGain      = controllers[i].Tuning.IGain;
+                tunings[i].DGain      = controllers[i].Tuning.DGain;
+                tunings[i].OutMin     = controllers[i].Tuning.OutMin;
+                tunings[i].OutMax     = controllers[i].Tuning.OutMax;
+                tunings[i].ClampLower = controllers[i].Tuning.ClampLower;
+                tunings[i].ClampUpper = controllers[i].Tuning.ClampUpper;
+                tunings[i].Scale      = controllers[i].Tuning.Scale;
             }
         }
     }

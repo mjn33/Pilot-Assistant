@@ -31,6 +31,10 @@ namespace PilotAssistant
             get { return instance; }
         }
 
+        private PAPreset defaultPAPreset;
+
+        private PAPreset activePAPreset;
+
         private FlightData flightData;
         private PID_Controller[] controllers = new PID_Controller[7];
 
@@ -53,31 +57,33 @@ namespace PilotAssistant
 
         public void Start()
         {
-            PID_Controller headingBankController = new PID.PID_Controller(2, 0.1, 0, -30, 30, -0.5, 0.5);
-            PID_Controller headingYawController = new PID.PID_Controller(0, 0, 0.01, -2, 2, -0.5, 0.5);
-            PID_Controller aileronController = new PID.PID_Controller(0.02, 0.005, 0.01, -1, 1, -0.4, 0.4);
-            PID_Controller rudderController = new PID.PID_Controller(0.1, 0.08, 0.05, -1, 1, -0.4, 0.4);
-            PID_Controller altitudeToClimbRate = new PID.PID_Controller(0.15, 0.01, 0, -50, 50, -0.01, 0.01);
-            PID_Controller aoaController = new PID.PID_Controller(2, 0.8, 2, -10, 10, -5, 5);
-            PID_Controller elevatorController = new PID.PID_Controller(0.05, 0.01, 0.1, -1, 1, -0.4, 0.4);
-            controllers[(int)PIDList.HdgBank] = headingBankController;
-            controllers[(int)PIDList.HdgYaw] = headingYawController;
-            controllers[(int)PIDList.Aileron] = aileronController;
-            controllers[(int)PIDList.Rudder] = rudderController;
-            controllers[(int)PIDList.Altitude] = altitudeToClimbRate;
-            controllers[(int)PIDList.VertSpeed] = aoaController;
-            controllers[(int)PIDList.Elevator] = elevatorController;
+            flightData = new FlightData(FlightGlobals.ActiveVessel);
+
+
+            // Initializing default PA preset
+            PID_Tuning[] paTunings = new PID_Tuning[Enum.GetNames(typeof(PIDList)).Length];
+            paTunings[(int)PIDList.HdgBank]   = new PID_Tuning(2,    0.1,   0,    -30, 30, -0.5,  0.5);
+            paTunings[(int)PIDList.HdgYaw]    = new PID_Tuning(0,    0,     0.01, -2,  2,  -0.5,  0.5);
+            paTunings[(int)PIDList.Aileron]   = new PID_Tuning(0.02, 0.005, 0.01, -1,  1,  -0.4,  0.4);
+            paTunings[(int)PIDList.Rudder]    = new PID_Tuning(0.1,  0.08,  0.05, -1,  1,  -0.4,  0.4);
+            paTunings[(int)PIDList.Altitude]  = new PID_Tuning(0.15, 0.01,  0,    -50, 50, -0.01, 0.01);
+            paTunings[(int)PIDList.VertSpeed] = new PID_Tuning(2,    0.8,   2,    -10, 10, -5,    5);
+            paTunings[(int)PIDList.Elevator]  = new PID_Tuning(0.05, 0.01,  0.1,  -1,  1,  -0.4,  0.4);
+            defaultPAPreset = new PAPreset("Default", paTunings);
+            activePAPreset = defaultPAPreset;
+
+            // Initializing controllers from preset
+            foreach (PIDList id in Enum.GetValues(typeof(PIDList)))
+            {
+                controllers[(int)id] = new PID_Controller(flightData.Vessel, paTunings[(int)id]);
+            }
 
             // PID inits
-            aileronController.InMax = 180;
-            aileronController.InMin = -180;
-            altitudeToClimbRate.InMin = 0;
-
-            // Set up a default preset that can be easily returned to
-            PresetManager.Instance.InitDefaultPATuning(controllers);
+            GetController(PIDList.Aileron).Tuning.InMin = -180;
+            GetController(PIDList.Aileron).Tuning.InMax = 180;
+            GetController(PIDList.Altitude).Tuning.InMin = 0;
 
             // register vessel
-            flightData = new FlightData(FlightGlobals.ActiveVessel);
             flightData.Vessel.OnAutopilotUpdate += new FlightInputCallback(VesselController);
             GameEvents.onVesselChange.Add(VesselSwitch);
         }
@@ -270,23 +276,24 @@ namespace PilotAssistant
             }
         }
 
-        public void UpdatePreset()
-        {
-            PAPreset p = PresetManager.Instance.GetActivePAPreset();
-            if (p != null)
-                p.Update(controllers);
-            PresetManager.Instance.SavePresetsToFile();
-        }
+        // TODO: Remove this
+        // public void UpdatePreset()
+        // {
+        //     PAPreset p = PresetManager.Instance.GetActivePAPreset();
+        //     if (p != null)
+        //         p.Update(controllers);
+        //     PresetManager.Instance.SavePresetsToFile();
+        // }
 
-        public void RegisterNewPreset(string name)
-        {
-            PresetManager.Instance.RegisterPAPreset(controllers, name);
-        }
+        // public void RegisterNewPreset(string name)
+        // {
+        //     PresetManager.Instance.RegisterPAPreset(name, controllers);
+        // }
 
-        public void LoadPreset(PAPreset p)
-        {
-            PresetManager.Instance.LoadPAPreset(controllers, p);
-        }
+        // public void LoadPreset(PAPreset p)
+        // {
+        //     PresetManager.Instance.LoadPAPreset(controllers, p);
+        // }
 
         private bool SASCheck()
         {
@@ -406,6 +413,27 @@ namespace PilotAssistant
                     PAMainWindow.Instance.UpdateAltitudeField();
                 }
             }
+        }
+
+        public PAPreset ActivePAPreset
+        {
+            get { return activePAPreset; }
+            set { activePAPreset = value; }
+        }
+
+        public PAPreset DefaultPAPreset
+        {
+            get { return defaultPAPreset; }
+        }
+
+        public FlightData FlightData
+        {
+            get { return flightData; }
+        }
+
+        public PID_Controller[] Controllers
+        {
+            get { return controllers; }
         }
     }
 }

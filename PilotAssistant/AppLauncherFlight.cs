@@ -18,8 +18,8 @@ namespace PilotAssistant
 
         private void Awake()
         {
-            GameEvents.onGUIApplicationLauncherReady.Add(this.OnAppLauncherReady);
-
+            //GameEvents.onGUIApplicationLauncherReady.Add(this.OnAppLauncherReady);
+            OnAppLauncherReady();
             RenderingManager.AddToPostDrawQueue(5, DrawGUI);
         }
 
@@ -27,7 +27,7 @@ namespace PilotAssistant
         {
             RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
 
-            GameEvents.onGUIApplicationLauncherReady.Remove(this.OnAppLauncherReady);
+            //GameEvents.onGUIApplicationLauncherReady.Remove(this.OnAppLauncherReady);
             if (btnLauncher != null)
                 ApplicationLauncher.Instance.RemoveModApplication(btnLauncher);
         }

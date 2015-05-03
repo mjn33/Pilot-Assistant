@@ -1,1 +1,26 @@
-{"NAME":"Pilot Assistant","URL":"http://ksp-avc.cybutek.net/version.php?id=82","DOWNLOAD":"https://github.com/Crzyrndm/Pilot-Assistant/releases","VERSION":{"MAJOR":0,"MINOR":9,"PATCH":5,"BUILD":0},"KSP_VERSION":{"MAJOR":0,"MINOR":90,"PATCH":0},"KSP_VERSION_MIN":{"MAJOR":0,"MINOR":90,"PATCH":0},"KSP_VERSION_MAX":{"MAJOR":0,"MINOR":90,"PATCH":0}}
+{
+  "KSP_VERSION_MAX": {
+    "PATCH": 0,
+    "MINOR": 0,
+    "MAJOR": 1
+  },
+  "KSP_VERSION_MIN": {
+    "PATCH": 0,
+    "MINOR": 0,
+    "MAJOR": 1
+  },
+  "KSP_VERSION": {
+    "PATCH": 0,
+    "MINOR": 0,
+    "MAJOR": 1
+  },
+  "VERSION": {
+    "BUILD": 0,
+    "PATCH": 5,
+    "MINOR": 9,
+    "MAJOR": 0
+  },
+  "DOWNLOAD": "https://github.com/mjn33/Pilot-Assistant/releases",
+  "URL": "https://raw.githubusercontent.com/mjn33/Pilot-Assistant/master/GameData/Pilot%20Assistant/PilotAssistant.version",
+  "NAME": "Pilot Assistant"
+}

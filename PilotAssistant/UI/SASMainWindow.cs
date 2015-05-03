@@ -177,15 +177,19 @@ namespace PilotAssistant.UI
 
         private void DrawSSASPreset(int windowId)
         {
-            if (PresetManager.Instance.GetActiveSASPreset() != null)
+            if (SurfSAS.Instance.ActiveSSASPreset != null)
             {
-                SASPreset p = PresetManager.Instance.GetActiveSASPreset();
-                GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.Style(UIStyle.BoldLabel));
-                if (p != PresetManager.Instance.GetDefaultSASTuning())
+                SASPreset p = SurfSAS.Instance.ActiveSSASPreset;
+                GUILayout.Label(string.Format("Active Preset: {0}", p.Name), GeneralUI.Style(UIStyle.BoldLabel));
+                if (p != SurfSAS.Instance.DefaultSSASPreset)
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        SurfSAS.Instance.UpdatePreset();
+                        // TODO: Reformat this (too much indentation)
+                        // TODO: Print out message?
+                        p.Update(SurfSAS.Instance.Controllers);
+                        PresetManager.Instance.SavePresetsToFile();
+                        GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
                     }
                 }
             }
@@ -195,8 +199,21 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GUILayout.Width(25)))
             {
-                SurfSAS.Instance.RegisterNewPreset(newPresetName);
-                newPresetName = "";
+                // TODO: Print out message?
+                // TODO: Null check
+                SASPreset p = null;
+                // Disallow these names to reduce confusion
+                if (newPresetName.ToLower() != "default" &&
+                    newPresetName.ToLower() != "stock")
+                    p = PresetManager.Instance.RegisterSSASPreset(newPresetName, SurfSAS.Instance.Controllers);
+                else
+                    GeneralUI.PostMessage("The preset name \"" + newPresetName + "\" is not allowed");
+                if (p != null)
+                {
+                    SurfSAS.Instance.ActiveSSASPreset = p;
+                    newPresetName = "";
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" added");
+                }
             }
             GUILayout.EndHorizontal();
 
@@ -205,20 +222,29 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default"))
             {
-                SurfSAS.Instance.LoadPreset(PresetManager.Instance.GetDefaultSASTuning());
+                // TODO: Print out message?
+                SASPreset p = SurfSAS.Instance.DefaultSSASPreset;
+                SurfSAS.Instance.ActiveSSASPreset = p;
+                p.LoadPreset(SurfSAS.Instance.Controllers);
+                GeneralUI.PostMessage("Default SSAS preset loaded");
             }
 
             List<SASPreset> allPresets = PresetManager.Instance.GetAllSASPresets();
             foreach (SASPreset p in allPresets)
             {
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button(p.GetName()))
+                if (GUILayout.Button(p.Name))
                 {
-                    SurfSAS.Instance.LoadPreset(p);
+                    // TODO: Print out message?
+                    SurfSAS.Instance.ActiveSSASPreset = p;
+                    p.LoadPreset(SurfSAS.Instance.Controllers);
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
                 {
+                    // TODO: Print out message?
                     PresetManager.Instance.RemovePreset(p);
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" deleted");
                 }
                 GUILayout.EndHorizontal();
             }
@@ -230,15 +256,19 @@ namespace PilotAssistant.UI
 
         private void DrawStockPreset(int windowId)
         {
-            if (PresetManager.Instance.GetActiveStockSASPreset() != null)
+            if (SurfSAS.Instance.ActiveStockPreset != null)
             {
-                SASPreset p = PresetManager.Instance.GetActiveStockSASPreset();
-                GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.Style(UIStyle.BoldLabel));
-                if (p != PresetManager.Instance.GetDefaultStockSASTuning())
+                SASPreset p = SurfSAS.Instance.ActiveStockPreset;
+                GUILayout.Label(string.Format("Active Preset: {0}", p.Name), GeneralUI.Style(UIStyle.BoldLabel));
+                if (p != SurfSAS.Instance.DefaultStockPreset)
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        SurfSAS.Instance.UpdateStockPreset();
+                        // TODO: Reformat this (too much indentation)
+                        // TODO: Print out message?
+                        p.UpdateStock(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                        PresetManager.Instance.SavePresetsToFile();
+                        GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
                     }
                 }
             }
@@ -248,30 +278,53 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+",  GUILayout.Width(25)))
             {
-                SurfSAS.Instance.RegisterNewStockPreset(newPresetName);
-                newPresetName = "";
+                // TODO: Print out message?
+                // TODO: Null check
+                SASPreset p = null;
+                // Disallow these names to reduce confusion
+                if (newPresetName.ToLower() != "default" &&
+                    newPresetName.ToLower() != "stock")
+                    p = PresetManager.Instance.RegisterStockSASPreset(
+                        newPresetName, SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                else
+                    GeneralUI.PostMessage("The preset name \"" + newPresetName + "\" is not allowed");
+                if (p != null)
+                {
+                    SurfSAS.Instance.ActiveStockPreset = p;
+                    newPresetName = "";
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" added");
+                }
             }
             GUILayout.EndHorizontal();
 
             GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection));
             GUILayout.Label("Available presets: ", GeneralUI.Style(UIStyle.BoldLabel));
 
-            if (GUILayout.Button("Default"))
+            if (GUILayout.Button("Stock"))
             {
-                SurfSAS.Instance.LoadStockPreset(PresetManager.Instance.GetDefaultStockSASTuning());
+                // TODO: Print out message?
+                SASPreset p = SurfSAS.Instance.DefaultStockPreset;
+                SurfSAS.Instance.ActiveStockPreset = p;
+                p.LoadStockPreset(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                GeneralUI.PostMessage("Default stock preset loaded");
             }
 
             List<SASPreset> allStockPresets = PresetManager.Instance.GetAllStockSASPresets();
             foreach (SASPreset p in allStockPresets)
             {
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button(p.GetName()))
+                if (GUILayout.Button(p.Name))
                 {
-                    SurfSAS.Instance.LoadStockPreset(p);
+                    // TODO: Print out message?
+                    SurfSAS.Instance.ActiveStockPreset = p;
+                    p.LoadStockPreset(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
                 {
+                    // TODO: Print out message?
                     PresetManager.Instance.RemovePreset(p);
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" deleted");
                 }
                 GUILayout.EndHorizontal();
             }
@@ -289,10 +342,10 @@ namespace PilotAssistant.UI
 
             if (ssasPidDisplay[(int)controllerID])
             {
-                controller.PGain = GeneralUI.LabPlusNumBox(windowId, "Kp:", controller.PGain, "F3", 45);
-                controller.IGain = GeneralUI.LabPlusNumBox(windowId, "Ki:", controller.IGain, "F3", 45);
-                controller.DGain = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.DGain, "F3", 45);
-                controller.Scalar = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.Scalar, "F3", 45);
+                controller.Tuning.PGain = GeneralUI.LabPlusNumBox(windowId, "Kp:", controller.Tuning.PGain, "F3", 45);
+                controller.Tuning.IGain = GeneralUI.LabPlusNumBox(windowId, "Ki:", controller.Tuning.IGain, "F3", 45);
+                controller.Tuning.DGain = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.Tuning.DGain, "F3", 45);
+                controller.Tuning.Scale = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.Tuning.Scale, "F3", 45);
             }
         }
 

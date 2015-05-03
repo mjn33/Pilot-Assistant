@@ -208,7 +208,7 @@ namespace PilotAssistant.UI
                                                GeneralUI.Style(UIStyle.ToggleButton));
             bool tmpToggle2 = GUILayout.Toggle(!isAltitudeHoldActive, "Vertical Speed",
                                                GeneralUI.Style(UIStyle.ToggleButton));
-            // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
+            // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes.
             if (tmpToggle1 && tmpToggle2)
                 PilotAssistant.Instance.ToggleAltitudeHold();
 
@@ -260,15 +260,19 @@ namespace PilotAssistant.UI
 
         private void DrawPresetWindow(int windowId)
         {
-            if (PresetManager.Instance.GetActivePAPreset() != null)
+            if (PilotAssistant.Instance.ActivePAPreset != null)
             {
-                PAPreset p = PresetManager.Instance.GetActivePAPreset();
-                GUILayout.Label(string.Format("Active Preset: {0}", p.GetName()), GeneralUI.Style(UIStyle.BoldLabel));
-                if (p != PresetManager.Instance.GetDefaultPATuning())
+                PAPreset p = PilotAssistant.Instance.ActivePAPreset;
+                GUILayout.Label(string.Format("Active Preset: {0}", p.Name), GeneralUI.Style(UIStyle.BoldLabel));
+                if (p != PilotAssistant.Instance.DefaultPAPreset)
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        PilotAssistant.Instance.UpdatePreset();
+                        // TODO: Reformat this (too much indentation)
+                        // TODO: Print out message?
+                        p.Update(PilotAssistant.Instance.Controllers);
+                        PresetManager.Instance.SavePresetsToFile();
+                        GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
                     }
                 }
             }
@@ -278,8 +282,21 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GUILayout.Width(25)))
             {
-                PilotAssistant.Instance.RegisterNewPreset(newPresetName);
-                newPresetName = "";
+                // TODO: Print out message?
+                // TODO: Null check
+                PAPreset p = null;
+                // Disallow these names to reduce confusion
+                if (newPresetName.ToLower() != "default" &&
+                    newPresetName.ToLower() != "stock")
+                    p = PresetManager.Instance.RegisterPAPreset(newPresetName, PilotAssistant.Instance.Controllers);
+                else
+                    GeneralUI.PostMessage("The preset name \"" + newPresetName + "\" is not allowed");
+                if (p != null)
+                {
+                    PilotAssistant.Instance.ActivePAPreset = p;
+                    newPresetName = "";
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" added");
+                }
             }
             GUILayout.EndHorizontal();
 
@@ -288,20 +305,29 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default"))
             {
-                PilotAssistant.Instance.LoadPreset(PresetManager.Instance.GetDefaultPATuning());
+                // TODO: Print out message?
+                PAPreset p = PilotAssistant.Instance.DefaultPAPreset;
+                PilotAssistant.Instance.ActivePAPreset = p;
+                p.LoadPreset(PilotAssistant.Instance.Controllers);
+                GeneralUI.PostMessage("Default Pilot Assistant preset loaded");
             }
 
             List<PAPreset> allPresets = PresetManager.Instance.GetAllPAPresets();
             foreach (PAPreset p in allPresets)
             {
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button(p.GetName()))
+                if (GUILayout.Button(p.Name))
                 {
-                    PilotAssistant.Instance.LoadPreset(p);
+                    // TODO: Print out message?
+                    PilotAssistant.Instance.ActivePAPreset = p;
+                    p.LoadPreset(PilotAssistant.Instance.Controllers);
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
                 {
+                    // TODO: Print out message?
                     PresetManager.Instance.RemovePreset(p);
+                    GeneralUI.PostMessage("Preset \"" + p.Name + "\" deleted");
                 }
                 GUILayout.EndHorizontal();
             }
@@ -342,10 +368,10 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 GUILayout.BeginVertical();
 
-                controller.PGain  = GeneralUI.LabPlusNumBox(windowId, "Kp:", controller.PGain, "F3", 45);
-                controller.IGain  = GeneralUI.LabPlusNumBox(windowId, "Ki:", controller.IGain, "F3", 45);
-                controller.DGain  = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.DGain, "F3", 45);
-                controller.Scalar = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.Scalar, "F3", 45);
+                controller.Tuning.PGain = GeneralUI.LabPlusNumBox(windowId, "Kp:", controller.Tuning.PGain, "F3", 45);
+                controller.Tuning.IGain = GeneralUI.LabPlusNumBox(windowId, "Ki:", controller.Tuning.IGain, "F3", 45);
+                controller.Tuning.DGain = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.Tuning.DGain, "F3", 45);
+                controller.Tuning.Scale = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.Tuning.Scale, "F3", 45);
 
                 if (showPIDLimits)
                 {
@@ -356,23 +382,23 @@ namespace PilotAssistant.UI
 
                     if (!invertOutput)
                     {
-                        controller.OutMax = GeneralUI.LabPlusNumBox(windowId, tmpMaxText, controller.OutMax, "F3");
+                        controller.Tuning.OutMax = GeneralUI.LabPlusNumBox(windowId, tmpMaxText, controller.Tuning.OutMax, "F3");
                         if (doublesided)
-                            controller.OutMin = GeneralUI.LabPlusNumBox(windowId, tmpMinText, controller.OutMin, "F3");
+                            controller.Tuning.OutMin = GeneralUI.LabPlusNumBox(windowId, tmpMinText, controller.Tuning.OutMin, "F3");
                         else
-                            controller.OutMin = -controller.OutMax;
-                        controller.ClampLower = GeneralUI.LabPlusNumBox(windowId, "I Clamp Lower:", controller.ClampLower, "F3");
-                        controller.ClampUpper = GeneralUI.LabPlusNumBox(windowId, "I Clamp Upper:", controller.ClampUpper, "F3");
+                            controller.Tuning.OutMin = -controller.Tuning.OutMax;
+                        controller.Tuning.ClampLower = GeneralUI.LabPlusNumBox(windowId, "I Clamp Lower:", controller.Tuning.ClampLower, "F3");
+                        controller.Tuning.ClampUpper = GeneralUI.LabPlusNumBox(windowId, "I Clamp Upper:", controller.Tuning.ClampUpper, "F3");
                     }
                     else
                     { // used when response * -1 is used to get the correct output
-                        controller.OutMax = -1 * GeneralUI.LabPlusNumBox(windowId, tmpMinText, -controller.OutMax, "F3");
+                        controller.Tuning.OutMax = -GeneralUI.LabPlusNumBox(windowId, tmpMinText, -controller.Tuning.OutMax, "F3");
                         if (doublesided)
-                            controller.OutMin = -1 * GeneralUI.LabPlusNumBox(windowId, tmpMaxText, -controller.OutMin, "F3");
+                            controller.Tuning.OutMin = -GeneralUI.LabPlusNumBox(windowId, tmpMaxText, -controller.Tuning.OutMin, "F3");
                         else
-                            controller.OutMin = -controller.OutMax;
-                        controller.ClampUpper = -1 * GeneralUI.LabPlusNumBox(windowId, "I Clamp Lower:", -controller.ClampUpper, "F3");
-                        controller.ClampLower = -1 * GeneralUI.LabPlusNumBox(windowId, "I Clamp Upper:", -controller.ClampLower, "F3");
+                            controller.Tuning.OutMin = -controller.Tuning.OutMax;
+                        controller.Tuning.ClampUpper = -GeneralUI.LabPlusNumBox(windowId, "I Clamp Lower:", -controller.Tuning.ClampUpper, "F3");
+                        controller.Tuning.ClampLower = -GeneralUI.LabPlusNumBox(windowId, "I Clamp Upper:", -controller.Tuning.ClampLower, "F3");
                     }
                 }
                 GUILayout.EndVertical();
