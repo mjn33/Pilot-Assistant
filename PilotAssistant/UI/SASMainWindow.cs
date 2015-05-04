@@ -50,23 +50,13 @@ namespace PilotAssistant.UI
             RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
         }
 
-        public bool IsVisible()
-        {
-            return isVisible;
-        }
-
-        public void ToggleVisibility()
-        {
-            isVisible = !isVisible;
-        }
-
         private void DrawGUI()
         {
             GUI.skin = GeneralUI.Skin;
-            if (SurfSAS.Instance.IsSSASMode())
+            if (SurfSAS.Instance.IsSSASMode)
             {
                 Color oldColor = GUI.backgroundColor;
-                if (SurfSAS.Instance.IsSSASOperational())
+                if (SurfSAS.Instance.IsSSASOperational)
                     GUI.backgroundColor = GeneralUI.SSASActiveBGColor;
                 else
                     GUI.backgroundColor = GeneralUI.SSASInactiveBGColor;
@@ -101,8 +91,8 @@ namespace PilotAssistant.UI
 
         private void DrawSASWindow(int windowId)
         {
-            bool isOperational = SurfSAS.Instance.IsSSASOperational() || SurfSAS.Instance.IsStockSASOperational();
-            bool isSSASMode = SurfSAS.Instance.IsSSASMode();
+            bool isOperational = SurfSAS.Instance.IsSSASOperational || SurfSAS.Instance.IsStockSASOperational;
+            bool isSSASMode = SurfSAS.Instance.IsSSASMode;
             GUILayout.BeginHorizontal();
             showPresets = GUILayout.Toggle(showPresets, "Presets", GeneralUI.Style(UIStyle.ToggleButton));
             GUILayout.EndHorizontal();
@@ -152,7 +142,7 @@ namespace PilotAssistant.UI
             }
             else
             {
-                FlightData flightData = SurfSAS.Instance.GetFlightData();
+                FlightData flightData = SurfSAS.Instance.FlightData;
                 VesselAutopilot.VesselSAS sas = flightData.Vessel.Autopilot.SAS;
 
                 DrawPIDValues(windowId, sas.pidLockedPitch, "Pitch", SASList.Pitch);
@@ -169,7 +159,7 @@ namespace PilotAssistant.UI
 
         private void DrawPresetWindow(int windowId)
         {
-            if (SurfSAS.Instance.IsSSASMode())
+            if (SurfSAS.Instance.IsSSASMode)
                 DrawSSASPreset(windowId);
             else
                 DrawStockPreset(windowId);
@@ -185,8 +175,6 @@ namespace PilotAssistant.UI
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        // TODO: Reformat this (too much indentation)
-                        // TODO: Print out message?
                         p.Update(SurfSAS.Instance.Controllers);
                         PresetManager.Instance.SavePresetsToFile();
                         GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
@@ -199,8 +187,6 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GUILayout.Width(25)))
             {
-                // TODO: Print out message?
-                // TODO: Null check
                 SASPreset p = null;
                 // Disallow these names to reduce confusion
                 if (newPresetName.ToLower() != "default" &&
@@ -222,7 +208,6 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default"))
             {
-                // TODO: Print out message?
                 SASPreset p = SurfSAS.Instance.DefaultSSASPreset;
                 SurfSAS.Instance.ActiveSSASPreset = p;
                 p.LoadPreset(SurfSAS.Instance.Controllers);
@@ -235,14 +220,12 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.Name))
                 {
-                    // TODO: Print out message?
                     SurfSAS.Instance.ActiveSSASPreset = p;
                     p.LoadPreset(SurfSAS.Instance.Controllers);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
                 {
-                    // TODO: Print out message?
                     PresetManager.Instance.RemovePreset(p);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" deleted");
                 }
@@ -264,8 +247,6 @@ namespace PilotAssistant.UI
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        // TODO: Reformat this (too much indentation)
-                        // TODO: Print out message?
                         p.UpdateStock(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
                         PresetManager.Instance.SavePresetsToFile();
                         GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
@@ -278,8 +259,6 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+",  GUILayout.Width(25)))
             {
-                // TODO: Print out message?
-                // TODO: Null check
                 SASPreset p = null;
                 // Disallow these names to reduce confusion
                 if (newPresetName.ToLower() != "default" &&
@@ -302,7 +281,6 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Stock"))
             {
-                // TODO: Print out message?
                 SASPreset p = SurfSAS.Instance.DefaultStockPreset;
                 SurfSAS.Instance.ActiveStockPreset = p;
                 p.LoadStockPreset(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
@@ -315,14 +293,12 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.Name))
                 {
-                    // TODO: Print out message?
                     SurfSAS.Instance.ActiveStockPreset = p;
                     p.LoadStockPreset(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
                 {
-                    // TODO: Print out message?
                     PresetManager.Instance.RemovePreset(p);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" deleted");
                 }
@@ -363,6 +339,12 @@ namespace PilotAssistant.UI
                 controller.kd = GeneralUI.LabPlusNumBox(windowId, "Kd:", controller.kd, "F3", 45);
                 controller.clamp = GeneralUI.LabPlusNumBox(windowId, "Scalar:", controller.clamp, "F3", 45);
             }
+        }
+
+        public bool IsVisible
+        {
+            get { return isVisible; }
+            set { isVisible = value; }
         }
     }
 }

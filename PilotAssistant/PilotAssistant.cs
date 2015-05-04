@@ -162,13 +162,6 @@ namespace PilotAssistant
             }
         }
 
-        public FlightData GetFlightData() { return flightData; }
-        public bool IsPaused() { return isPaused || SASCheck(); }
-        public bool IsHdgActive() { return isHdgActive; }
-        public bool IsWingLvlActive() { return isWingLvlActive; }
-        public bool IsVertActive() { return isVertActive; }
-        public bool IsAltitudeHoldActive() { return isAltitudeHoldActive; }
-
         public void SetHdgActive(double newHdg)
         {
             // Set heading control on to specified heading
@@ -276,29 +269,10 @@ namespace PilotAssistant
             }
         }
 
-        // TODO: Remove this
-        // public void UpdatePreset()
-        // {
-        //     PAPreset p = PresetManager.Instance.GetActivePAPreset();
-        //     if (p != null)
-        //         p.Update(controllers);
-        //     PresetManager.Instance.SavePresetsToFile();
-        // }
-
-        // public void RegisterNewPreset(string name)
-        // {
-        //     PresetManager.Instance.RegisterPAPreset(name, controllers);
-        // }
-
-        // public void LoadPreset(PAPreset p)
-        // {
-        //     PresetManager.Instance.LoadPAPreset(controllers, p);
-        // }
-
         private bool SASCheck()
         {
-            return SurfSAS.Instance.IsSSASOperational() ||
-                   SurfSAS.Instance.IsStockSASOperational();
+            return SurfSAS.Instance.IsSSASOperational ||
+                   SurfSAS.Instance.IsStockSASOperational;
         }
 
         private void KeyPressChanges()
@@ -312,14 +286,14 @@ namespace PilotAssistant
             if (Input.GetKeyDown(KeyCode.Tab))
             {
                 // When active and paused, unpause.
-                if ((IsHdgActive() || IsVertActive()) && (isPaused || SASCheck()))
+                if ((IsHdgActive || IsVertActive) && (isPaused || SASCheck()))
                 {
                     isPaused = false;
                     SurfSAS.Instance.SetOperational(false);
                     GeneralUI.PostMessage("Pilot assistant unpaused.");
                 }
                 // Otherwise, when active and not paused, pause.
-                else if (IsHdgActive() || IsVertActive())
+                else if (IsHdgActive || IsVertActive)
                 {
                     isPaused = true;
                     GeneralUI.PostMessage("Pilot assistant paused.");
@@ -328,7 +302,7 @@ namespace PilotAssistant
 
             // SAS activation change, only show messages when active and not paused.
             if ((GameSettings.SAS_TOGGLE.GetKeyDown() || GameSettings.SAS_HOLD.GetKeyDown() || GameSettings.SAS_HOLD.GetKeyUp())
-                && !isPaused && (IsHdgActive() || IsVertActive()))
+                && !isPaused && (IsHdgActive || IsVertActive))
             {
                 if (SASCheck())
                     GeneralUI.PostMessage("Pilot Assistant control handed to SAS.");
@@ -434,6 +408,31 @@ namespace PilotAssistant
         public PID_Controller[] Controllers
         {
             get { return controllers; }
+        }
+
+        public bool IsPaused
+        {
+            get { return isPaused || SASCheck(); }
+        }
+
+        public bool IsHdgActive
+        {
+            get { return isHdgActive; }
+        }
+
+        public bool IsWingLvlActive
+        {
+            get { return isWingLvlActive; }
+        }
+
+        public bool IsVertActive
+        {
+            get { return isVertActive; }
+        }
+
+        public bool IsAltitudeHoldActive
+        {
+            get { return isAltitudeHoldActive; }
         }
     }
 }

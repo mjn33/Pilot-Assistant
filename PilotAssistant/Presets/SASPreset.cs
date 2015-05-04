@@ -56,16 +56,6 @@ namespace PilotAssistant.Presets
             tunings[(int)SASList.Yaw]   = LoadControllerGains(node.GetNode("RudderController"));
         }
 
-        public string Name
-        {
-            get { return name; }
-        }
-
-        public bool IsStockPreset
-        {
-            get { return isStockPreset; }
-        }
-
         private PID_Tuning LoadControllerGains(ConfigNode node)
         {
             double kp, ki, kd, scale;
@@ -153,6 +143,16 @@ namespace PilotAssistant.Presets
             tunings[(int)SASList.Yaw].IGain = sas.pidLockedYaw.ki;
             tunings[(int)SASList.Yaw].DGain = sas.pidLockedYaw.kd;
             tunings[(int)SASList.Yaw].Scale = sas.pidLockedYaw.clamp;
+        }
+
+        public string Name
+        {
+            get { return name; }
+        }
+
+        public bool IsStockPreset
+        {
+            get { return isStockPreset; }
         }
     }
 }

@@ -158,7 +158,7 @@ namespace PilotAssistant
             {
                 ssasToggleKey = !ssasToggleKey;
                 // If the change made SSAS operational, update target
-                if (IsSSASOperational())
+                if (IsSSASOperational)
                     UpdateTarget();
             }
 
@@ -167,14 +167,14 @@ namespace PilotAssistant
             {
                 ssasHoldKey = true;
                 // If the change made SSAS operational, update target
-                if (IsSSASOperational())
+                if (IsSSASOperational)
                     UpdateTarget();
             }
             if (GameSettings.SAS_HOLD.GetKeyUp())
             {
                 ssasHoldKey = false;
                 // If the change made SSAS operational, update target
-                if (IsSSASOperational())
+                if (IsSSASOperational)
                     UpdateTarget();
             }
         }
@@ -183,7 +183,7 @@ namespace PilotAssistant
         {
             flightData.UpdateAttitude();
 
-            if (!IsSSASOperational())
+            if (!IsSSASOperational)
                 return;
 
             PauseManager(state); // manage activation of SAS axes depending on user input
@@ -306,8 +306,6 @@ namespace PilotAssistant
             }
         }
 
-        public FlightData GetFlightData() { return flightData; }
-
         public PID_Controller GetController(SASList id)
         {
             return controllers[(int)id];
@@ -316,7 +314,7 @@ namespace PilotAssistant
         public void ToggleSSASMode()
         {
             // Swap modes, ensure operational state doesn't change.
-            bool wasOperational = IsSSASOperational() || IsStockSASOperational();
+            bool wasOperational = IsSSASOperational || IsStockSASOperational;
             ssasMode = !ssasMode;
             SetOperational(wasOperational);
         }
@@ -324,23 +322,23 @@ namespace PilotAssistant
         public void ToggleOperational()
         {
             if (ssasMode)
-                SetOperational(!IsSSASOperational());
+                SetOperational(!IsSSASOperational);
             else
-                SetOperational(!IsStockSASOperational());
+                SetOperational(!IsStockSASOperational);
         }
 
         public void SetOperational(bool operational)
         {
             if (ssasMode)
             {
-                bool wasOperational = IsSSASOperational();
+                bool wasOperational = IsSSASOperational;
                 // Behave the same a stock SAS
                 if (wasOperational != ssasToggleKey && wasOperational != operational)
                     ssasToggleKey = !operational;
                 else if (wasOperational != operational)
                     ssasToggleKey = operational;
                 // If only just switched on, update target
-                if (IsSSASOperational() && !wasOperational)
+                if (IsSSASOperational && !wasOperational)
                     UpdateTarget();
             }
             else
@@ -348,17 +346,6 @@ namespace PilotAssistant
                 flightData.Vessel.ActionGroups[KSPActionGroup.SAS]
                     = operational;
             }
-        }
-
-        public bool IsSSASOperational()
-        {
-            // ssasHoldKey toggles the main state, i.e. active --> off, off --> active
-            return (ssasToggleKey != ssasHoldKey) && ssasMode;
-        }
-
-        public bool IsStockSASOperational()
-        {
-            return flightData.Vessel.ActionGroups[KSPActionGroup.SAS];
         }
 
         public bool IsSSASAxisEnabled(SASList id)
@@ -369,11 +356,6 @@ namespace PilotAssistant
         public void SetSSASAxisEnabled(SASList id, bool enabled)
         {
             axisState[(int)id].enabled = enabled;
-        }
-
-        public bool IsSSASMode()
-        {
-            return ssasMode;
         }
 
         private bool IsPaused(SASList id)
@@ -392,44 +374,6 @@ namespace PilotAssistant
             state.activationFadeCurrent = state.activationFadeInitial;
             state.activationTimeElapsed = 0;
         }
-
-        // public void UpdatePreset()
-        // {
-        //     SASPreset p = activeSSASPreset;
-        //     if (p != null)
-        //         p.Update(controllers);
-        //     PresetManager.Instance.SavePresetsToFile();
-        // }
-
-        // // TODO: Remove this?
-        // public void RegisterNewPreset(string name)
-        // {
-        //     PresetManager.Instance.RegisterSASPreset(name, controllers);
-        // }
-
-        // public void LoadPreset(SASPreset p)
-        // {
-        //     PresetManager.Instance.LoadSASPreset(controllers, p);
-        // }
-
-        // public void UpdateStockPreset()
-        // {
-        //     SASPreset p = activeStockPreset;
-        //     if (p != null)
-        //         p.UpdateStock(flightData.Vessel.Autopilot.SAS);
-        //     PresetManager.Instance.SavePresetsToFile();
-        // }
-
-        // // TODO: Remove this?
-        // public void RegisterNewStockPreset(string name)
-        // {
-        //     PresetManager.Instance.RegisterStockSASPreset(name, flightData.Vessel.Autopilot.SAS);
-        // }
-
-        // public void LoadStockPreset(SASPreset p)
-        // {
-        //     PresetManager.Instance.LoadStockSASPreset(flightData.Vessel.Autopilot.SAS, p);
-        // }
 
         public void UpdateTarget()
         {
@@ -528,6 +472,22 @@ namespace PilotAssistant
         public FlightData FlightData
         {
             get { return flightData; }
+        }
+
+        public bool IsSSASOperational
+        {
+            // ssasHoldKey toggles the main state, i.e. active --> off, off --> active
+            get { return (ssasToggleKey != ssasHoldKey) && ssasMode; }
+        }
+
+        public bool IsStockSASOperational
+        {
+            get { return flightData.Vessel.ActionGroups[KSPActionGroup.SAS]; }
+        }
+
+        public bool IsSSASMode
+        {
+            get { return ssasMode; }
         }
     }
 }

@@ -43,11 +43,6 @@ namespace PilotAssistant.Presets
             tunings[(int)PIDList.Elevator]  = LoadControllerGains(node.GetNode("ElevatorController"));
         }
 
-        public string Name
-        {
-            get { return name; }
-        }
-
         private PID_Tuning LoadControllerGains(ConfigNode node)
         {
             double kp, ki, kd, outMin, outMax, clampLower, clampUpper, scale;
@@ -118,6 +113,11 @@ namespace PilotAssistant.Presets
                 tunings[i].ClampUpper = controllers[i].Tuning.ClampUpper;
                 tunings[i].Scale      = controllers[i].Tuning.Scale;
             }
+        }
+
+        public string Name
+        {
+            get { return name; }
         }
     }
 }

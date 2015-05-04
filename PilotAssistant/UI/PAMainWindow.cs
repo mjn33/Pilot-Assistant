@@ -52,16 +52,6 @@ namespace PilotAssistant.UI
             RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
         }
 
-        public bool IsVisible()
-        {
-            return isVisible;
-        }
-
-        public void ToggleVisibility()
-        {
-            isVisible = !isVisible;
-        }
-
         private void DrawGUI()
         {
             GUI.skin = GeneralUI.Skin;
@@ -105,7 +95,7 @@ namespace PilotAssistant.UI
         private void DrawMainWindow(int windowId)
         {
             GUILayout.BeginVertical(GUILayout.Height(0), GUILayout.Width(0), GUILayout.ExpandHeight(true));
-            if (PilotAssistant.Instance.IsPaused() && (PilotAssistant.Instance.IsHdgActive() || PilotAssistant.Instance.IsVertActive()))
+            if (PilotAssistant.Instance.IsPaused && (PilotAssistant.Instance.IsHdgActive || PilotAssistant.Instance.IsVertActive))
             {
                 GUILayout.Label("CONTROL PAUSED", GeneralUI.Style(UIStyle.AlertLabel), GUILayout.ExpandWidth(true));
             }
@@ -131,9 +121,9 @@ namespace PilotAssistant.UI
 
         private void DrawHeadingControls(int windowId)
         {
-            bool isHdgActive = PilotAssistant.Instance.IsHdgActive();
-            bool isWingLvlActive = PilotAssistant.Instance.IsWingLvlActive();
-            FlightData flightData = PilotAssistant.Instance.GetFlightData();
+            bool isHdgActive = PilotAssistant.Instance.IsHdgActive;
+            bool isWingLvlActive = PilotAssistant.Instance.IsWingLvlActive;
+            FlightData flightData = PilotAssistant.Instance.FlightData;
 
             // Heading
             GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection),
@@ -188,9 +178,9 @@ namespace PilotAssistant.UI
 
         private void DrawVerticalControls(int windowId)
         {
-            bool isVertActive = PilotAssistant.Instance.IsVertActive();
-            bool isAltitudeHoldActive = PilotAssistant.Instance.IsAltitudeHoldActive();
-            FlightData flightData = PilotAssistant.Instance.GetFlightData();
+            bool isVertActive = PilotAssistant.Instance.IsVertActive;
+            bool isAltitudeHoldActive = PilotAssistant.Instance.IsAltitudeHoldActive;
+            FlightData flightData = PilotAssistant.Instance.FlightData;
 
             // Vertical speed
             GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection), GUILayout.ExpandWidth(true));
@@ -268,8 +258,6 @@ namespace PilotAssistant.UI
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        // TODO: Reformat this (too much indentation)
-                        // TODO: Print out message?
                         p.Update(PilotAssistant.Instance.Controllers);
                         PresetManager.Instance.SavePresetsToFile();
                         GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
@@ -282,8 +270,6 @@ namespace PilotAssistant.UI
             newPresetName = GUILayout.TextField(newPresetName);
             if (GUILayout.Button("+", GUILayout.Width(25)))
             {
-                // TODO: Print out message?
-                // TODO: Null check
                 PAPreset p = null;
                 // Disallow these names to reduce confusion
                 if (newPresetName.ToLower() != "default" &&
@@ -305,7 +291,6 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default"))
             {
-                // TODO: Print out message?
                 PAPreset p = PilotAssistant.Instance.DefaultPAPreset;
                 PilotAssistant.Instance.ActivePAPreset = p;
                 p.LoadPreset(PilotAssistant.Instance.Controllers);
@@ -318,14 +303,12 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.Name))
                 {
-                    // TODO: Print out message?
                     PilotAssistant.Instance.ActivePAPreset = p;
                     p.LoadPreset(PilotAssistant.Instance.Controllers);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
                 {
-                    // TODO: Print out message?
                     PresetManager.Instance.RemovePreset(p);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" deleted");
                 }
@@ -404,6 +387,12 @@ namespace PilotAssistant.UI
                 GUILayout.EndVertical();
                 GUILayout.EndHorizontal();
             }
+        }
+
+        public bool IsVisible
+        {
+            get { return isVisible; }
+            set { isVisible = value; }
         }
     }
 }

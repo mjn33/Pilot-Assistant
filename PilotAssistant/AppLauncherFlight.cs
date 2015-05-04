@@ -72,17 +72,17 @@ namespace PilotAssistant
 
         private void DrawOptionsWindow(int id)
         {
-            bool tmpToggle = GUILayout.Toggle(PAMainWindow.Instance.IsVisible(), "Pilot Assistant", GeneralUI.Style(UIStyle.ToggleButton));
-            if (tmpToggle != PAMainWindow.Instance.IsVisible())
+            bool tmpToggle = GUILayout.Toggle(PAMainWindow.Instance.IsVisible, "Pilot Assistant", GeneralUI.Style(UIStyle.ToggleButton));
+            if (tmpToggle != PAMainWindow.Instance.IsVisible)
             {
-                PAMainWindow.Instance.ToggleVisibility();
+                PAMainWindow.Instance.IsVisible = !PAMainWindow.Instance.IsVisible;
                 btnLauncher.toggleButton.SetFalse();
             }
 
-            tmpToggle = GUILayout.Toggle(SASMainWindow.Instance.IsVisible(), "SAS Systems", GeneralUI.Style(UIStyle.ToggleButton));
-            if (tmpToggle != SASMainWindow.Instance.IsVisible())
+            tmpToggle = GUILayout.Toggle(SASMainWindow.Instance.IsVisible, "SAS Systems", GeneralUI.Style(UIStyle.ToggleButton));
+            if (tmpToggle != SASMainWindow.Instance.IsVisible)
             {
-                SASMainWindow.Instance.ToggleVisibility();
+                SASMainWindow.Instance.IsVisible = !SASMainWindow.Instance.IsVisible;
                 btnLauncher.toggleButton.SetFalse();
             }
         }
