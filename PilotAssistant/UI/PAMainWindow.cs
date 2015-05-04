@@ -31,6 +31,7 @@ namespace PilotAssistant.UI
         private double targetVert = 0.0;
         private double targetAlt = 0.0;
         private double targetHeading = 0.0;
+        private double targetSrfSpeed = 0.0;
         private string newPresetName = "";
 
         private const int WINDOW_ID = 34244;
@@ -92,6 +93,11 @@ namespace PilotAssistant.UI
             targetAlt = PilotAssistant.Instance.GetController(PIDList.Altitude).SetPoint;
         }
 
+        public void UpdateSrfSpeedField()
+        {
+            targetSrfSpeed = PilotAssistant.Instance.GetController(PIDList.Throttle).SetPoint;
+        }
+
         private void DrawMainWindow(int windowId)
         {
             GUILayout.BeginVertical(GUILayout.Height(0), GUILayout.Width(0), GUILayout.ExpandHeight(true));
@@ -111,6 +117,8 @@ namespace PilotAssistant.UI
             DrawHeadingControls(windowId);
 
             DrawVerticalControls(windowId);
+
+            DrawThrottleControls(windowId);
 
             // Autolock vessel controls on focus.
             GeneralUI.AutolockTextFields(windowId, ControlTypes.ALL_SHIP_CONTROLS | ControlTypes.TIMEWARP);
@@ -245,6 +253,42 @@ namespace PilotAssistant.UI
             DrawPIDValues(windowId, PIDList.VertSpeed, "Vertical Speed", "m/s", flightData.Vessel.verticalSpeed, 2, "AoA", "\u00B0", true);
             if (showControlSurfaces)
                 DrawPIDValues(windowId, PIDList.Elevator, "Angle of Attack", "\u00B0", flightData.AoA, 3, "Deflect", "\u00B0", true, true, false);
+            GUILayout.EndVertical();
+        }
+
+        private void DrawThrottleControls(int windowId)
+        {
+            bool isThrottleActive = PilotAssistant.Instance.IsThrottleActive;
+            FlightData flightData = PilotAssistant.Instance.FlightData;
+
+            GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection),
+                                    GUILayout.ExpandWidth(true));
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Toggle(isThrottleActive, isThrottleActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
+                                 GUILayout.ExpandWidth(false)) != isThrottleActive)
+            {
+                PilotAssistant.Instance.ToggleThrottleControl();
+            }
+            GUILayout.Label("Throttle Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
+            GUILayout.EndHorizontal();
+
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Target Speed: ");
+            GeneralUI.TextFieldNext(windowId);
+            string targetSrfSpeedText = GUILayout.TextField(targetSrfSpeed.ToString("F1"), GUILayout.Width(60));
+            try
+            {
+                targetSrfSpeed = double.Parse(targetSrfSpeedText);
+            }
+            catch {}
+            if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
+            {
+                ScreenMessages.PostScreenMessage("Target surface speed updated");
+                PilotAssistant.Instance.SetThrottleActive(targetSrfSpeed);
+            }
+            GUILayout.EndHorizontal();
+            if (isThrottleActive)
+                DrawPIDValues(windowId, PIDList.Throttle, "Speed", "m/s", flightData.Vessel.srfSpeed, 2, "Throttle", "", true);
             GUILayout.EndVertical();
         }
 

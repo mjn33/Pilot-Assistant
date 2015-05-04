@@ -18,7 +18,8 @@ namespace PilotAssistant
         Rudder,
         Altitude,
         VertSpeed,
-        Elevator
+        Elevator,
+        Throttle
     }
 
     [KSPAddon(KSPAddon.Startup.Flight, false)]
@@ -36,19 +37,21 @@ namespace PilotAssistant
         private PAPreset activePAPreset;
 
         private FlightData flightData;
-        private PID_Controller[] controllers = new PID_Controller[7];
+        private PID_Controller[] controllers = new PID_Controller[Enum.GetNames(typeof(PIDList)).Length];
 
         // Whether PA has been paused by the user, does not account for SAS being turned on.
-        // Use SurfSAS.Instance.CheckSAS() as well.
+        // Use SASCheck() as well.
         private bool isPaused = false;
-        // RollController
+        // Roll Controller
         private bool isHdgActive = false;
-        // PitchController
+        // Pitch Controller
         private bool isVertActive = false;
         // Altitude / vertical speed
         private bool isAltitudeHoldActive = false;
         // Wing leveller / Heading control
         private bool isWingLvlActive = false;
+        // Surface speed / throttle control
+        private bool isThrottleActive = false;
 
         public void Awake()
         {
@@ -69,6 +72,9 @@ namespace PilotAssistant
             paTunings[(int)PIDList.Altitude]  = new PID_Tuning(0.15, 0.01,  0,    -50, 50, -0.01, 0.01);
             paTunings[(int)PIDList.VertSpeed] = new PID_Tuning(2,    0.8,   2,    -10, 10, -5,    5);
             paTunings[(int)PIDList.Elevator]  = new PID_Tuning(0.05, 0.01,  0.1,  -1,  1,  -0.4,  0.4);
+            // Was: Kp -- 0.2, Ki -- 0.08, Kd -- 0.1
+            // FIXME: This doesn't work as well as it could with AJE
+            paTunings[(int)PIDList.Throttle]  = new PID_Tuning(0.15, 0.1,   0.5,  -1,  0,  -1,    0.4);
             defaultPAPreset = new PAPreset("Default", paTunings);
             activePAPreset = defaultPAPreset;
 
@@ -82,6 +88,7 @@ namespace PilotAssistant
             GetController(PIDList.Aileron).Tuning.InMin = -180;
             GetController(PIDList.Aileron).Tuning.InMax = 180;
             GetController(PIDList.Altitude).Tuning.InMin = 0;
+            GetController(PIDList.Throttle).Tuning.InMin = 0;
 
             // register vessel
             flightData.Vessel.OnAutopilotUpdate += new FlightInputCallback(VesselController);
@@ -160,6 +167,15 @@ namespace PilotAssistant
                 GetController(PIDList.Elevator).SetPoint = -GetController(PIDList.VertSpeed).Response(flightData.Vessel.verticalSpeed);
                 state.pitch = (float)Functions.Clamp(-GetController(PIDList.Elevator).Response(flightData.AoA), -1, 1);
             }
+
+            if (isThrottleActive && GetController(PIDList.Throttle).SetPoint != 0)
+            {
+                double response = -GetController(PIDList.Throttle).Response(flightData.Vessel.srfSpeed);
+                state.mainThrottle = (float)Functions.Clamp(response, 0, 1);
+            }
+            else if (isThrottleActive && GetController(PIDList.Throttle).SetPoint == 0)
+                // Easy case, we don't want any throttle for this target speed
+                state.mainThrottle = 0;
         }
 
         public void SetHdgActive(double newHdg)
@@ -191,6 +207,15 @@ namespace PilotAssistant
             PAMainWindow.Instance.UpdateAltitudeField();
             isVertActive = true;
             isAltitudeHoldActive = true;
+            SurfSAS.Instance.SetOperational(false);
+            isPaused = false;
+        }
+
+        public void SetThrottleActive(double newSrfSpeed)
+        {
+            GetController(PIDList.Throttle).SetPoint = newSrfSpeed;
+            PAMainWindow.Instance.UpdateSrfSpeedField();
+            isThrottleActive = true;
             SurfSAS.Instance.SetOperational(false);
             isPaused = false;
         }
@@ -266,6 +291,18 @@ namespace PilotAssistant
             {
                 GetController(PIDList.VertSpeed).SetPoint = flightData.Vessel.verticalSpeed;
                 PAMainWindow.Instance.UpdateVertSpeedField();
+            }
+        }
+
+        public void ToggleThrottleControl()
+        {
+            isThrottleActive = !isThrottleActive;
+            if (isThrottleActive)
+            {
+                GetController(PIDList.Throttle).SetPoint = flightData.Vessel.srfSpeed;
+                PAMainWindow.Instance.UpdateSrfSpeedField();
+                SurfSAS.Instance.SetOperational(false);
+                isPaused = false;
             }
         }
 
@@ -433,6 +470,11 @@ namespace PilotAssistant
         public bool IsAltitudeHoldActive
         {
             get { return isAltitudeHoldActive; }
+        }
+
+        public bool IsThrottleActive
+        {
+            get { return isThrottleActive; }
         }
     }
 }

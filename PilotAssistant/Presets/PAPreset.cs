@@ -41,6 +41,7 @@ namespace PilotAssistant.Presets
             tunings[(int)PIDList.Altitude]  = LoadControllerGains(node.GetNode("AltitudeController"));
             tunings[(int)PIDList.VertSpeed] = LoadControllerGains(node.GetNode("AoAController"));
             tunings[(int)PIDList.Elevator]  = LoadControllerGains(node.GetNode("ElevatorController"));
+            tunings[(int)PIDList.Throttle]  = LoadControllerGains(node.GetNode("ThrottleController"));
         }
 
         private PID_Tuning LoadControllerGains(ConfigNode node)
@@ -82,6 +83,7 @@ namespace PilotAssistant.Presets
             node.AddNode(GainsToConfigNode("AltitudeController", tunings[(int)PIDList.Altitude]));
             node.AddNode(GainsToConfigNode("AoAController",      tunings[(int)PIDList.VertSpeed]));
             node.AddNode(GainsToConfigNode("ElevatorController", tunings[(int)PIDList.Elevator]));
+            node.AddNode(GainsToConfigNode("ThrottleController", tunings[(int)PIDList.Throttle]));
             return node;
         }
 
