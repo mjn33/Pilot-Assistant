@@ -55,5 +55,40 @@ namespace PilotAssistant.Utility
             }
             return (1 - pct) * lower + pct * upper;
         }
+
+        /// <summary>
+        /// Checks for player pitch input
+        /// </summary>
+        public static bool HasPitchInput()
+        {
+            return InputLockManager.IsUnlocked(ControlTypes.PITCH) &&
+                   (GameSettings.PITCH_DOWN.GetKey() || GameSettings.PITCH_UP.GetKey() || !IsAxisNeutral(GameSettings.AXIS_PITCH));
+        }
+
+        /// <summary>
+        /// Checks for player roll input
+        /// </summary>
+        public static bool HasRollInput()
+        {
+            return InputLockManager.IsUnlocked(ControlTypes.ROLL) &&
+                   (GameSettings.ROLL_LEFT.GetKey() || GameSettings.ROLL_RIGHT.GetKey() || !IsAxisNeutral(GameSettings.AXIS_ROLL));
+        }
+
+        /// <summary>
+        /// Checks for player yaw input
+        /// </summary>
+        public static bool HasYawInput()
+        {
+            return InputLockManager.IsUnlocked(ControlTypes.YAW) &&
+                   (GameSettings.YAW_LEFT.GetKey() || GameSettings.YAW_RIGHT.GetKey() || !IsAxisNeutral(GameSettings.AXIS_YAW));
+        }
+
+        /// <summary>
+        /// Checks for input on the given axis, ignores very small input
+        /// </summary>
+        public static bool IsAxisNeutral(AxisBinding axis)
+        {
+            return axis.IsNeutral() && Math.Abs(axis.GetAxis()) < 0.00001;
+        }
     }
 }

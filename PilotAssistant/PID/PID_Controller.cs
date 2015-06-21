@@ -7,9 +7,11 @@ namespace PilotAssistant.PID
 
     public class PID_Controller
     {
-        private double setpoint = 0; // process setpoint
+        // These are used for BumplessSetPoint
+        private double targetSetpoint = 0; // target setpoint
+        private double activeSetpoint = 0; // process setpoint
+        private double increment = 0;
 
-        private Vessel vessel;
         private PID_Tuning tun;
 
         private double sum = 0; // integral sum
@@ -22,24 +24,49 @@ namespace PilotAssistant.PID
 
         private bool skipDerivative = false;
 
-        public PID_Controller(Vessel vessel, PID_Tuning tun)
+        public PID_Controller(PID_Tuning tun)
         {
-            this.vessel = vessel;
             this.tun = new PID_Tuning(tun);
         }
 
-        public double Response(double input)
+        public double Response(double input, bool useIntegral)
         {
+            if (activeSetpoint != targetSetpoint)
+            {
+                // Ease in quadratic fasion
+                increment += tun.Easing * TimeWarp.fixedDeltaTime * 0.01;
+                if (activeSetpoint < targetSetpoint)
+                    activeSetpoint = Math.Min(activeSetpoint + increment, targetSetpoint);
+                else
+                    activeSetpoint = Math.Max(activeSetpoint - increment, targetSetpoint);
+            }
+
             input = Functions.Clamp(input, tun.InMin, tun.InMax);
             dt = TimeWarp.fixedDeltaTime;
-            error = input - setpoint;
+            error = input - activeSetpoint;
+
             if (skipDerivative)
             {
                 skipDerivative = false;
                 previous = input;
             }
-            double response = ProportionalError(error) + IntegralError(error) + DerivativeError(input);
-            return Functions.Clamp(response, tun.OutMin, tun.OutMax);
+            double pResponse = ProportionalError(error);
+            double iResponse = IntegralError(error, useIntegral);
+            double dResponse = DerivativeError(input);
+
+            return Functions.Clamp(pResponse + iResponse + dResponse, tun.OutMin, tun.OutMax);
+        }
+
+        public double Response(double error, double rate, bool useIntegral)
+        {
+            // skipDerivative not relevant here
+            double pResponse = ProportionalError(error);
+            double iResponse = IntegralError(error, useIntegral);
+            double dResponse = DerivativeError(rate);
+
+            dResponse = rate * tun.DGain / tun.Scale;
+
+            return Functions.Clamp(pResponse + iResponse + dResponse, tun.OutMin, tun.OutMax);
         }
 
         private double ProportionalError(double input)
@@ -49,9 +76,9 @@ namespace PilotAssistant.PID
             return input * tun.PGain / tun.Scale;
         }
 
-        private double IntegralError(double input)
+        private double IntegralError(double input, bool useIntegral)
         {
-            if (tun.IGain == 0 || vessel.checkLanded() || !vessel.IsControllable)
+            if (tun.IGain == 0 || !useIntegral)
             {
                 sum = 0;
                 return sum;
@@ -87,8 +114,15 @@ namespace PilotAssistant.PID
 
         public double SetPoint
         {
-            get { return setpoint; }
-            set { setpoint = value; }
+            get { return activeSetpoint; }
+            set { activeSetpoint = targetSetpoint = value; }
+        }
+
+        // Smoothly transition to this new setpoint
+        public virtual double BumplessSetPoint
+        {
+            get { return activeSetpoint; }
+            set { targetSetpoint = value; increment = 0; }
         }
 
         public PID_Tuning Tuning

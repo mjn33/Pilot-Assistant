@@ -81,7 +81,7 @@ namespace PilotAssistant
             // Initializing controllers from preset
             foreach (PIDList id in Enum.GetValues(typeof(PIDList)))
             {
-                controllers[(int)id] = new PID_Controller(flightData.Vessel, paTunings[(int)id]);
+                controllers[(int)id] = new PID_Controller(paTunings[(int)id]);
             }
 
             // PID inits
@@ -91,7 +91,7 @@ namespace PilotAssistant
             GetController(PIDList.Throttle).Tuning.InMin = 0;
 
             // register vessel
-            flightData.Vessel.OnAutopilotUpdate += new FlightInputCallback(VesselController);
+            flightData.Vessel.OnPostAutopilotUpdate += new FlightInputCallback(VesselController);
             GameEvents.onVesselChange.Add(VesselSwitch);
         }
 
@@ -103,9 +103,9 @@ namespace PilotAssistant
 
         private void VesselSwitch(Vessel v)
         {
-            flightData.Vessel.OnAutopilotUpdate -= new FlightInputCallback(VesselController);
-            flightData.Vessel = v;
-            flightData.Vessel.OnAutopilotUpdate += new FlightInputCallback(VesselController);
+            flightData.Vessel.OnPostAutopilotUpdate -= new FlightInputCallback(VesselController);
+            flightData = new FlightData(v);
+            flightData.Vessel.OnPostAutopilotUpdate += new FlightInputCallback(VesselController);
         }
 
         public void OnDestroy()
@@ -118,7 +118,7 @@ namespace PilotAssistant
             for (int i = 0; i < controllers.Length; i++)
                 controllers[i] = null;
 
-            flightData.Vessel.OnAutopilotUpdate -= new FlightInputCallback(VesselController);
+            flightData.Vessel.OnPostAutopilotUpdate -= new FlightInputCallback(VesselController);
         }
 
         public void Update()
@@ -133,6 +133,8 @@ namespace PilotAssistant
             if (isPaused || SASCheck())
                 return;
 
+            bool useIntegral = !flightData.Vessel.checkLanded() && flightData.Vessel.IsControllable;
+
             // Heading Control
             if (isHdgActive)
             {
@@ -142,35 +144,35 @@ namespace PilotAssistant
                 {
                     // Calculate the bank angle response based on the current heading
                     double hdgBankReponse = GetController(PIDList.HdgBank).Response(
-                        Functions.CalcRelativeAngle(flightData.Heading, GetController(PIDList.HdgBank).SetPoint));
+                        Functions.CalcRelativeAngle(flightData.Heading, GetController(PIDList.HdgBank).SetPoint), useIntegral);
                     // Aileron setpoint updated, bank angle also used for yaw calculations (don't go direct to rudder
                     // because we want yaw stabilisation *or* turn assistance)
                     GetController(PIDList.Aileron).SetPoint = hdgBankReponse;
                     GetController(PIDList.HdgYaw).SetPoint = hdgBankReponse;
-                    GetController(PIDList.Rudder).SetPoint = -GetController(PIDList.HdgYaw).Response(flightData.Yaw);
+                    GetController(PIDList.Rudder).SetPoint = -GetController(PIDList.HdgYaw).Response(flightData.Yaw, useIntegral);
                 }
                 else
                 {
                     GetController(PIDList.Aileron).SetPoint = 0;
                     GetController(PIDList.Rudder).SetPoint = 0;
                 }
-                state.roll = (float)Functions.Clamp(GetController(PIDList.Aileron).Response(flightData.Roll) + state.roll, -1, 1);
-                state.yaw = (float)Functions.Clamp(GetController(PIDList.Rudder).Response(flightData.Yaw), -1, 1);
+                state.roll = (float)Functions.Clamp(GetController(PIDList.Aileron).Response(flightData.Roll, useIntegral) + state.roll, -1, 1);
+                state.yaw = (float)Functions.Clamp(GetController(PIDList.Rudder).Response(flightData.Yaw, useIntegral), -1, 1);
             }
 
             if (isVertActive)
             {
                 // Set requested vertical speed
                 if (isAltitudeHoldActive)
-                    GetController(PIDList.VertSpeed).SetPoint = -GetController(PIDList.Altitude).Response(flightData.Vessel.altitude);
+                    GetController(PIDList.VertSpeed).SetPoint = -GetController(PIDList.Altitude).Response(flightData.Vessel.altitude, useIntegral);
 
-                GetController(PIDList.Elevator).SetPoint = -GetController(PIDList.VertSpeed).Response(flightData.Vessel.verticalSpeed);
-                state.pitch = (float)Functions.Clamp(-GetController(PIDList.Elevator).Response(flightData.AoA), -1, 1);
+                GetController(PIDList.Elevator).SetPoint = -GetController(PIDList.VertSpeed).Response(flightData.Vessel.verticalSpeed, useIntegral);
+                state.pitch = (float)Functions.Clamp(-GetController(PIDList.Elevator).Response(flightData.AoA, useIntegral), -1, 1);
             }
 
             if (isThrottleActive && GetController(PIDList.Throttle).SetPoint != 0)
             {
-                double response = -GetController(PIDList.Throttle).Response(flightData.Vessel.srfSpeed);
+                double response = -GetController(PIDList.Throttle).Response(flightData.Vessel.srfSpeed, useIntegral);
                 state.mainThrottle = (float)Functions.Clamp(response, 0, 1);
             }
             else if (isThrottleActive && GetController(PIDList.Throttle).SetPoint == 0)

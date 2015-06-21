@@ -46,7 +46,7 @@ namespace PilotAssistant.Presets
 
         private PID_Tuning LoadControllerGains(ConfigNode node)
         {
-            double kp, ki, kd, outMin, outMax, clampLower, clampUpper, scale;
+            double kp, ki, kd, outMin, outMax, clampLower, clampUpper, scale, easing;
             double.TryParse(node.GetValue("PGain"), out kp);
             double.TryParse(node.GetValue("IGain"), out ki);
             double.TryParse(node.GetValue("DGain"), out kd);
@@ -55,7 +55,8 @@ namespace PilotAssistant.Presets
             double.TryParse(node.GetValue("ClampLower"), out clampLower);
             double.TryParse(node.GetValue("ClampUpper"), out clampUpper);
             double.TryParse(node.GetValue("Scale"), out scale);
-            return new PID_Tuning(kp, ki, kd, outMin, outMax, clampLower, clampUpper, scale);
+            double.TryParse(node.GetValue("Easing"), out easing);
+            return new PID_Tuning(kp, ki, kd, outMin, outMax, clampLower, clampUpper, scale, easing);
         }
 
         private ConfigNode GainsToConfigNode(string name, PID_Tuning tuning)
@@ -69,6 +70,7 @@ namespace PilotAssistant.Presets
             node.AddValue("ClampLower", tuning.ClampLower);
             node.AddValue("ClampUpper", tuning.ClampUpper);
             node.AddValue("Scale", tuning.Scale);
+            node.AddValue("Easing", tuning.Easing);
             return node;
         }
 
@@ -99,6 +101,7 @@ namespace PilotAssistant.Presets
                 controllers[i].Tuning.ClampLower = tunings[i].ClampLower;
                 controllers[i].Tuning.ClampUpper = tunings[i].ClampUpper;
                 controllers[i].Tuning.Scale      = tunings[i].Scale;
+                controllers[i].Tuning.Easing     = tunings[i].Easing;
             }
         }
 
@@ -114,6 +117,7 @@ namespace PilotAssistant.Presets
                 tunings[i].ClampLower = controllers[i].Tuning.ClampLower;
                 tunings[i].ClampUpper = controllers[i].Tuning.ClampUpper;
                 tunings[i].Scale      = controllers[i].Tuning.Scale;
+                tunings[i].Easing     = controllers[i].Tuning.Easing;
             }
         }
 

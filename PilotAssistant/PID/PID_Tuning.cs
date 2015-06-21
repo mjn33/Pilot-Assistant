@@ -21,10 +21,11 @@ namespace PilotAssistant.PID
         private double integralClampLower; // AIW clamp
 
         private double scale = 1;
+        private double easing = 1;
 
         public PID_Tuning(
             double kp, double ki, double kd, double outMin, double outMax, double integralClampLower,
-            double integralClampUpper, double scale = 1)
+            double integralClampUpper, double scale = 1, double easing = 1)
         {
             this.kp = kp;
             this.ki = ki;
@@ -34,6 +35,7 @@ namespace PilotAssistant.PID
             this.integralClampLower = integralClampLower;
             this.integralClampUpper = integralClampUpper;
             this.scale = scale;
+            this.easing = easing;
         }
 
         // Copy constructor
@@ -47,6 +49,7 @@ namespace PilotAssistant.PID
             this.integralClampLower = other.integralClampLower;
             this.integralClampUpper = other.integralClampUpper;
             this.scale = other.scale;
+            this.easing = other.easing;
         }
 
         public double PGain
@@ -113,6 +116,12 @@ namespace PilotAssistant.PID
         {
             get { return scale; }
             set { scale = Math.Max(value, 0.01); }
+        }
+
+        public double Easing
+        {
+            get { return easing; }
+            set { easing =  Math.Max(value, 0.01); }
         }
     }
 }
