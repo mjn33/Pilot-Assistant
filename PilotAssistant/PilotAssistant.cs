@@ -22,20 +22,16 @@ namespace PilotAssistant
         Throttle
     }
 
-    [KSPAddon(KSPAddon.Startup.Flight, false)]
-    class PilotAssistant : MonoBehaviour
+    public class PilotAssistant
     {
-        // Singleton pattern, as opposed to using semi-static classes
-        private static PilotAssistant instance;
-        public static PilotAssistant Instance
-        {
-            get { return instance; }
-        }
+        private PilotAssistantModule module;
+        private PAMainWindow gui;
 
         private PAPreset defaultPAPreset;
 
         private PAPreset activePAPreset;
 
+        // Reference to FlightData stored in vessel module, here for convenience
         private FlightData flightData;
         private PID_Controller[] controllers = new PID_Controller[Enum.GetNames(typeof(PIDList)).Length];
 
@@ -53,16 +49,15 @@ namespace PilotAssistant
         // Surface speed / throttle control
         private bool isThrottleActive = false;
 
-        public void Awake()
+        public PilotAssistant(PilotAssistantModule module)
         {
-            instance = this;
+            this.module = module;
+            this.gui = new PAMainWindow(this);
+            this.flightData = module.FlightData;
         }
 
         public void Start()
         {
-            flightData = new FlightData(FlightGlobals.ActiveVessel);
-
-
             // Initializing default PA preset
             PID_Tuning[] paTunings = new PID_Tuning[Enum.GetNames(typeof(PIDList)).Length];
             paTunings[(int)PIDList.HdgBank]   = new PID_Tuning(2,    0.1,   0,    -30, 30, -0.5,  0.5);
@@ -89,10 +84,11 @@ namespace PilotAssistant
             GetController(PIDList.Aileron).Tuning.InMax = 180;
             GetController(PIDList.Altitude).Tuning.InMin = 0;
             GetController(PIDList.Throttle).Tuning.InMin = 0;
+        }
 
-            // register vessel
-            flightData.Vessel.OnPostAutopilotUpdate += new FlightInputCallback(VesselController);
-            GameEvents.onVesselChange.Add(VesselSwitch);
+        public void OnGUI()
+        {
+            gui.OnGUI();
         }
 
         public PID_Controller GetController(PIDList id)
@@ -101,24 +97,13 @@ namespace PilotAssistant
             return controllers[(int)id];
         }
 
-        private void VesselSwitch(Vessel v)
-        {
-            flightData.Vessel.OnPostAutopilotUpdate -= new FlightInputCallback(VesselController);
-            flightData = new FlightData(v);
-            flightData.Vessel.OnPostAutopilotUpdate += new FlightInputCallback(VesselController);
-        }
-
         public void OnDestroy()
         {
-            GameEvents.onVesselChange.Remove(VesselSwitch);
-            PresetManager.Instance.SavePresetsToFile();
             isHdgActive = false;
             isVertActive = false;
 
             for (int i = 0; i < controllers.Length; i++)
                 controllers[i] = null;
-
-            flightData.Vessel.OnPostAutopilotUpdate -= new FlightInputCallback(VesselController);
         }
 
         public void Update()
@@ -126,10 +111,8 @@ namespace PilotAssistant
             KeyPressChanges();
         }
 
-        private void VesselController(FlightCtrlState state)
+        public void VesselController(FlightCtrlState state)
         {
-            flightData.UpdateAttitude();
-
             if (isPaused || SASCheck())
                 return;
 
@@ -156,7 +139,7 @@ namespace PilotAssistant
                     GetController(PIDList.Aileron).SetPoint = 0;
                     GetController(PIDList.Rudder).SetPoint = 0;
                 }
-                state.roll = (float)Functions.Clamp(GetController(PIDList.Aileron).Response(flightData.Roll, useIntegral) + state.roll, -1, 1);
+                state.roll = (float)Functions.Clamp(GetController(PIDList.Aileron).Response(-flightData.Roll, useIntegral) + state.roll, -1, 1);
                 state.yaw = (float)Functions.Clamp(GetController(PIDList.Rudder).Response(flightData.Yaw, useIntegral), -1, 1);
             }
 
@@ -185,9 +168,9 @@ namespace PilotAssistant
             // Set heading control on to specified heading
             GetController(PIDList.HdgBank).SetPoint = newHdg;
             GetController(PIDList.HdgYaw).SetPoint = newHdg;
-            PAMainWindow.Instance.UpdateHeadingField();
+            gui.UpdateHeadingField();
             isHdgActive = true;
-            SurfSAS.Instance.SetOperational(false);
+            module.SurfSAS.SetOperational(false);
             isPaused = false;
         }
 
@@ -195,10 +178,10 @@ namespace PilotAssistant
         {
             // Set vertical control on
             GetController(PIDList.VertSpeed).SetPoint = newSpd;
-            PAMainWindow.Instance.UpdateVertSpeedField();
+            gui.UpdateVertSpeedField();
             isVertActive = true;
             isAltitudeHoldActive = false;
-            SurfSAS.Instance.SetOperational(false);
+            module.SurfSAS.SetOperational(false);
             isPaused = false;
         }
 
@@ -206,19 +189,19 @@ namespace PilotAssistant
         {
             // Set vertical control on
             GetController(PIDList.Altitude).SetPoint = newAlt;
-            PAMainWindow.Instance.UpdateAltitudeField();
+            gui.UpdateAltitudeField();
             isVertActive = true;
             isAltitudeHoldActive = true;
-            SurfSAS.Instance.SetOperational(false);
+            module.SurfSAS.SetOperational(false);
             isPaused = false;
         }
 
         public void SetThrottleActive(double newSrfSpeed)
         {
             GetController(PIDList.Throttle).SetPoint = newSrfSpeed;
-            PAMainWindow.Instance.UpdateSrfSpeedField();
+            gui.UpdateSrfSpeedField();
             isThrottleActive = true;
-            SurfSAS.Instance.SetOperational(false);
+            module.SurfSAS.SetOperational(false);
             isPaused = false;
         }
 
@@ -230,8 +213,8 @@ namespace PilotAssistant
                 // Set heading control on, use current heading
                 GetController(PIDList.HdgBank).SetPoint = flightData.Heading;
                 GetController(PIDList.HdgYaw).SetPoint = flightData.Heading; // added
-                PAMainWindow.Instance.UpdateHeadingField();
-                SurfSAS.Instance.SetOperational(false);
+                gui.UpdateHeadingField();
+                module.SurfSAS.SetOperational(false);
                 isPaused = false;
             }
             else
@@ -262,14 +245,14 @@ namespace PilotAssistant
                 if (isAltitudeHoldActive)
                 {
                     GetController(PIDList.Altitude).SetPoint = flightData.Vessel.altitude;
-                    PAMainWindow.Instance.UpdateAltitudeField();
+                    gui.UpdateAltitudeField();
                 }
                 else
                 {
                     GetController(PIDList.VertSpeed).SetPoint = flightData.Vessel.verticalSpeed;
-                    PAMainWindow.Instance.UpdateVertSpeedField();
+                    gui.UpdateVertSpeedField();
                 }
-                SurfSAS.Instance.SetOperational(false);
+                module.SurfSAS.SetOperational(false);
                 isPaused = false;
             }
             else
@@ -287,12 +270,12 @@ namespace PilotAssistant
             if (isAltitudeHoldActive)
             {
                 GetController(PIDList.Altitude).SetPoint = flightData.Vessel.altitude;
-                PAMainWindow.Instance.UpdateAltitudeField();
+                gui.UpdateAltitudeField();
             }
             else
             {
                 GetController(PIDList.VertSpeed).SetPoint = flightData.Vessel.verticalSpeed;
-                PAMainWindow.Instance.UpdateVertSpeedField();
+                gui.UpdateVertSpeedField();
             }
         }
 
@@ -302,16 +285,16 @@ namespace PilotAssistant
             if (isThrottleActive)
             {
                 GetController(PIDList.Throttle).SetPoint = flightData.Vessel.srfSpeed;
-                PAMainWindow.Instance.UpdateSrfSpeedField();
-                SurfSAS.Instance.SetOperational(false);
+                gui.UpdateSrfSpeedField();
+                module.SurfSAS.SetOperational(false);
                 isPaused = false;
             }
         }
 
         private bool SASCheck()
         {
-            return SurfSAS.Instance.IsSSASOperational ||
-                   SurfSAS.Instance.IsStockSASOperational;
+            return module.SurfSAS.IsSSASOperational ||
+                   module.SurfSAS.IsStockSASOperational;
         }
 
         private void KeyPressChanges()
@@ -328,7 +311,7 @@ namespace PilotAssistant
                 if ((IsHdgActive || IsVertActive) && (isPaused || SASCheck()))
                 {
                     isPaused = false;
-                    SurfSAS.Instance.SetOperational(false);
+                    module.SurfSAS.SetOperational(false);
                     GeneralUI.PostMessage("Pilot assistant unpaused.");
                 }
                 // Otherwise, when active and not paused, pause.
@@ -354,14 +337,14 @@ namespace PilotAssistant
             {
                 // Set controller and modes.
                 GetController(PIDList.VertSpeed).SetPoint = 0;
-                PAMainWindow.Instance.UpdateVertSpeedField();
+                gui.UpdateVertSpeedField();
                 isVertActive = true;
                 isAltitudeHoldActive = false;
                 isHdgActive = true;
                 isWingLvlActive = true;
                 // Make sure we are not paused and SAS is off.
                 isPaused = false;
-                SurfSAS.Instance.SetOperational(false);
+                module.SurfSAS.SetOperational(false);
                 GeneralUI.PostMessage("Pilot Assistant is levelling off.");
             }
 
@@ -391,7 +374,7 @@ namespace PilotAssistant
                         hdg -= 360;
                     GetController(PIDList.HdgBank).SetPoint = hdg;
                     GetController(PIDList.HdgYaw).SetPoint = hdg;
-                    PAMainWindow.Instance.UpdateHeadingField();
+                    gui.UpdateHeadingField();
                 }
 
                 // Update target vertical speed based on user control input
@@ -406,7 +389,7 @@ namespace PilotAssistant
                         vert += 0.4 * scale * GameSettings.AXIS_PITCH.GetAxis();
 
                     GetController(PIDList.VertSpeed).SetPoint = vert;
-                    PAMainWindow.Instance.UpdateVertSpeedField();
+                    gui.UpdateVertSpeedField();
                 }
 
                 // Update target altitude based on user control input
@@ -423,7 +406,7 @@ namespace PilotAssistant
                     if (alt < 0)
                         alt = 0;
                     GetController(PIDList.Altitude).SetPoint = alt;
-                    PAMainWindow.Instance.UpdateAltitudeField();
+                    gui.UpdateAltitudeField();
                 }
             }
         }

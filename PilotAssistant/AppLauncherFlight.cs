@@ -1,4 +1,5 @@
-﻿using System;
+﻿using KSP.UI.Screens;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -20,13 +21,10 @@ namespace PilotAssistant
         {
             //GameEvents.onGUIApplicationLauncherReady.Add(this.OnAppLauncherReady);
             OnAppLauncherReady();
-            RenderingManager.AddToPostDrawQueue(5, DrawGUI);
         }
 
         private void OnDestroy()
         {
-            RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
-
             //GameEvents.onGUIApplicationLauncherReady.Remove(this.OnAppLauncherReady);
             if (btnLauncher != null)
                 ApplicationLauncher.Instance.RemoveModApplication(btnLauncher);
@@ -56,7 +54,7 @@ namespace PilotAssistant
             showOptionsWindow = false;
         }
 
-        private void DrawGUI()
+        private void OnGUI()
         {
             GUI.skin = GeneralUI.Skin;
             if (showOptionsWindow)
@@ -72,19 +70,22 @@ namespace PilotAssistant
 
         private void DrawOptionsWindow(int id)
         {
-            bool tmpToggle = GUILayout.Toggle(PAMainWindow.Instance.IsVisible, "Pilot Assistant", GeneralUI.Style(UIStyle.ToggleButton));
-            if (tmpToggle != PAMainWindow.Instance.IsVisible)
+            bool tmpToggle = GUILayout.Toggle(ShowPA, "Pilot Assistant", GeneralUI.Style(UIStyle.ToggleButton));
+            if (tmpToggle != ShowPA)
             {
-                PAMainWindow.Instance.IsVisible = !PAMainWindow.Instance.IsVisible;
-                btnLauncher.toggleButton.SetFalse();
+                ShowPA = !ShowPA;
+                btnLauncher.toggleButton.Value = false;
             }
 
-            tmpToggle = GUILayout.Toggle(SASMainWindow.Instance.IsVisible, "SAS Systems", GeneralUI.Style(UIStyle.ToggleButton));
-            if (tmpToggle != SASMainWindow.Instance.IsVisible)
+            tmpToggle = GUILayout.Toggle(ShowSAS, "SAS Systems", GeneralUI.Style(UIStyle.ToggleButton));
+            if (tmpToggle != ShowSAS)
             {
-                SASMainWindow.Instance.IsVisible = !SASMainWindow.Instance.IsVisible;
-                btnLauncher.toggleButton.SetFalse();
+                ShowSAS = !ShowSAS;
+                btnLauncher.toggleButton.Value = false;
             }
         }
+
+        public static bool ShowPA { get; private set; }
+        public static bool ShowSAS { get; private set; }
     }
 }

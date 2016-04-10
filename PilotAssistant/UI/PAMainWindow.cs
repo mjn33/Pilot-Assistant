@@ -7,15 +7,9 @@ namespace PilotAssistant.UI
     using Presets;
     using Utility;
 
-    [KSPAddon(KSPAddon.Startup.Flight, false)]
-    public class PAMainWindow : MonoBehaviour
+    public class PAMainWindow
     {
-        // Singleton pattern, as opposed to using semi-static classes
-        private static PAMainWindow instance;
-        public static PAMainWindow Instance
-        {
-            get { return instance; }
-        }
+        private PilotAssistant pilotAssistant;
 
         private Rect windowRect = new Rect(10, 50, 10, 10);
         private Rect presetWindowRect = new Rect(0, 0, 200, 10);
@@ -23,7 +17,7 @@ namespace PilotAssistant.UI
         private bool isVisible = false;
         private bool showPresets = false;
 
-        private bool[] pidDisplay;
+        private bool[] pidDisplay = new bool[Enum.GetNames(typeof(PIDList)).Length];
 
         private bool showPIDLimits = false;
         private bool showControlSurfaces = false;
@@ -37,26 +31,15 @@ namespace PilotAssistant.UI
         private const int WINDOW_ID = 34244;
         private const int PRESET_WINDOW_ID = 34245;
 
-        private void Awake()
+        public PAMainWindow(PilotAssistant pilotAssistant)
         {
-            instance = this;
-            pidDisplay = new bool[Enum.GetNames(typeof(PIDList)).Length];
+            this.pilotAssistant = pilotAssistant;
         }
 
-        private void Start()
-        {
-            RenderingManager.AddToPostDrawQueue(5, DrawGUI);
-        }
-
-        private void OnDestroy()
-        {
-            RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
-        }
-
-        private void DrawGUI()
+        public void OnGUI()
         {
             GUI.skin = GeneralUI.Skin;
-            if (isVisible)
+            if (AppLauncherFlight.ShowPA)
             {
                 windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawMainWindow, "Pilot Assistant", GUILayout.Width(0),
                                               GUILayout.Height(0));
@@ -80,28 +63,28 @@ namespace PilotAssistant.UI
 
         public void UpdateHeadingField()
         {
-            targetHeading = PilotAssistant.Instance.GetController(PIDList.HdgBank).SetPoint;
+            targetHeading = pilotAssistant.GetController(PIDList.HdgBank).SetPoint;
         }
 
         public void UpdateVertSpeedField()
         {
-            targetVert = PilotAssistant.Instance.GetController(PIDList.VertSpeed).SetPoint;
+            targetVert = pilotAssistant.GetController(PIDList.VertSpeed).SetPoint;
         }
 
         public void UpdateAltitudeField()
         {
-            targetAlt = PilotAssistant.Instance.GetController(PIDList.Altitude).SetPoint;
+            targetAlt = pilotAssistant.GetController(PIDList.Altitude).SetPoint;
         }
 
         public void UpdateSrfSpeedField()
         {
-            targetSrfSpeed = PilotAssistant.Instance.GetController(PIDList.Throttle).SetPoint;
+            targetSrfSpeed = pilotAssistant.GetController(PIDList.Throttle).SetPoint;
         }
 
         private void DrawMainWindow(int windowId)
         {
             GUILayout.BeginVertical(GUILayout.Height(0), GUILayout.Width(0), GUILayout.ExpandHeight(true));
-            if (PilotAssistant.Instance.IsPaused && (PilotAssistant.Instance.IsHdgActive || PilotAssistant.Instance.IsVertActive))
+            if (pilotAssistant.IsPaused && (pilotAssistant.IsHdgActive || pilotAssistant.IsVertActive))
             {
                 GUILayout.Label("CONTROL PAUSED", GeneralUI.Style(UIStyle.AlertLabel), GUILayout.ExpandWidth(true));
             }
@@ -129,9 +112,9 @@ namespace PilotAssistant.UI
 
         private void DrawHeadingControls(int windowId)
         {
-            bool isHdgActive = PilotAssistant.Instance.IsHdgActive;
-            bool isWingLvlActive = PilotAssistant.Instance.IsWingLvlActive;
-            FlightData flightData = PilotAssistant.Instance.FlightData;
+            bool isHdgActive = pilotAssistant.IsHdgActive;
+            bool isWingLvlActive = pilotAssistant.IsWingLvlActive;
+            FlightData flightData = pilotAssistant.FlightData;
 
             // Heading
             GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection),
@@ -140,7 +123,7 @@ namespace PilotAssistant.UI
             if (GUILayout.Toggle(isHdgActive, isHdgActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
                                  GUILayout.ExpandWidth(false)) != isHdgActive)
             {
-                PilotAssistant.Instance.ToggleHdg();
+                pilotAssistant.ToggleHdg();
             }
             GUILayout.Label("Roll and Yaw Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
             GUILayout.EndHorizontal();
@@ -150,7 +133,7 @@ namespace PilotAssistant.UI
             bool tmpToggle2 = GUILayout.Toggle(isWingLvlActive, "Wing lvl", GeneralUI.Style(UIStyle.ToggleButton));
             // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes. 
             if (tmpToggle1 && tmpToggle2)
-                PilotAssistant.Instance.ToggleWingLvl();
+                pilotAssistant.ToggleWingLvl();
 
             GUILayout.EndHorizontal();
             if (!isWingLvlActive)
@@ -167,7 +150,7 @@ namespace PilotAssistant.UI
                 if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
                 {
                     ScreenMessages.PostScreenMessage("Target Heading updated");
-                    PilotAssistant.Instance.SetHdgActive(targetHeading);
+                    pilotAssistant.SetHdgActive(targetHeading);
                 }
                 GUILayout.EndHorizontal();
             }
@@ -186,9 +169,9 @@ namespace PilotAssistant.UI
 
         private void DrawVerticalControls(int windowId)
         {
-            bool isVertActive = PilotAssistant.Instance.IsVertActive;
-            bool isAltitudeHoldActive = PilotAssistant.Instance.IsAltitudeHoldActive;
-            FlightData flightData = PilotAssistant.Instance.FlightData;
+            bool isVertActive = pilotAssistant.IsVertActive;
+            bool isAltitudeHoldActive = pilotAssistant.IsAltitudeHoldActive;
+            FlightData flightData = pilotAssistant.FlightData;
 
             // Vertical speed
             GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection), GUILayout.ExpandWidth(true));
@@ -196,7 +179,7 @@ namespace PilotAssistant.UI
             if (GUILayout.Toggle(isVertActive, isVertActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
                                  GUILayout.ExpandWidth(false)) != isVertActive)
             {
-                PilotAssistant.Instance.ToggleVert();
+                pilotAssistant.ToggleVert();
             }
             GUILayout.Label("Vertical Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
             GUILayout.EndHorizontal();
@@ -208,7 +191,7 @@ namespace PilotAssistant.UI
                                                GeneralUI.Style(UIStyle.ToggleButton));
             // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes.
             if (tmpToggle1 && tmpToggle2)
-                PilotAssistant.Instance.ToggleAltitudeHold();
+                pilotAssistant.ToggleAltitudeHold();
 
             GUILayout.EndHorizontal();
 
@@ -226,7 +209,7 @@ namespace PilotAssistant.UI
                 if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
                 {
                     ScreenMessages.PostScreenMessage("Target Altitude updated");
-                    PilotAssistant.Instance.SetAltitudeHoldActive(targetAlt);
+                    pilotAssistant.SetAltitudeHoldActive(targetAlt);
                 }
                 GUILayout.EndHorizontal();
             }
@@ -244,7 +227,7 @@ namespace PilotAssistant.UI
                 if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
                 {
                     ScreenMessages.PostScreenMessage("Target Speed updated");
-                    PilotAssistant.Instance.SetVertSpeedActive(targetVert);
+                    pilotAssistant.SetVertSpeedActive(targetVert);
                 }
                 GUILayout.EndHorizontal();
             }
@@ -258,8 +241,8 @@ namespace PilotAssistant.UI
 
         private void DrawThrottleControls(int windowId)
         {
-            bool isThrottleActive = PilotAssistant.Instance.IsThrottleActive;
-            FlightData flightData = PilotAssistant.Instance.FlightData;
+            bool isThrottleActive = pilotAssistant.IsThrottleActive;
+            FlightData flightData = pilotAssistant.FlightData;
 
             GUILayout.BeginVertical(GeneralUI.Style(UIStyle.GUISection),
                                     GUILayout.ExpandWidth(true));
@@ -267,7 +250,7 @@ namespace PilotAssistant.UI
             if (GUILayout.Toggle(isThrottleActive, isThrottleActive ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
                                  GUILayout.ExpandWidth(false)) != isThrottleActive)
             {
-                PilotAssistant.Instance.ToggleThrottleControl();
+                pilotAssistant.ToggleThrottleControl();
             }
             GUILayout.Label("Throttle Control", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
             GUILayout.EndHorizontal();
@@ -284,7 +267,7 @@ namespace PilotAssistant.UI
             if (GUILayout.Button("Set", GUILayout.ExpandWidth(false)))
             {
                 ScreenMessages.PostScreenMessage("Target surface speed updated");
-                PilotAssistant.Instance.SetThrottleActive(targetSrfSpeed);
+                pilotAssistant.SetThrottleActive(targetSrfSpeed);
             }
             GUILayout.EndHorizontal();
             if (isThrottleActive)
@@ -294,15 +277,15 @@ namespace PilotAssistant.UI
 
         private void DrawPresetWindow(int windowId)
         {
-            if (PilotAssistant.Instance.ActivePAPreset != null)
+            if (pilotAssistant.ActivePAPreset != null)
             {
-                PAPreset p = PilotAssistant.Instance.ActivePAPreset;
+                PAPreset p = pilotAssistant.ActivePAPreset;
                 GUILayout.Label(string.Format("Active Preset: {0}", p.Name), GeneralUI.Style(UIStyle.BoldLabel));
-                if (p != PilotAssistant.Instance.DefaultPAPreset)
+                if (p != pilotAssistant.DefaultPAPreset)
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        p.Update(PilotAssistant.Instance.Controllers);
+                        p.Update(pilotAssistant.Controllers);
                         PresetManager.Instance.SavePresetsToFile();
                         GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
                     }
@@ -318,12 +301,12 @@ namespace PilotAssistant.UI
                 // Disallow these names to reduce confusion
                 if (newPresetName.ToLower() != "default" &&
                     newPresetName.ToLower() != "stock")
-                    p = PresetManager.Instance.RegisterPAPreset(newPresetName, PilotAssistant.Instance.Controllers);
+                    p = PresetManager.Instance.RegisterPAPreset(newPresetName, pilotAssistant.Controllers);
                 else
                     GeneralUI.PostMessage("The preset name \"" + newPresetName + "\" is not allowed");
                 if (p != null)
                 {
-                    PilotAssistant.Instance.ActivePAPreset = p;
+                    pilotAssistant.ActivePAPreset = p;
                     newPresetName = "";
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" added");
                 }
@@ -335,9 +318,9 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default"))
             {
-                PAPreset p = PilotAssistant.Instance.DefaultPAPreset;
-                PilotAssistant.Instance.ActivePAPreset = p;
-                p.LoadPreset(PilotAssistant.Instance.Controllers);
+                PAPreset p = pilotAssistant.DefaultPAPreset;
+                pilotAssistant.ActivePAPreset = p;
+                p.LoadPreset(pilotAssistant.Controllers);
                 GeneralUI.PostMessage("Default Pilot Assistant preset loaded");
             }
 
@@ -347,8 +330,8 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.Name))
                 {
-                    PilotAssistant.Instance.ActivePAPreset = p;
-                    p.LoadPreset(PilotAssistant.Instance.Controllers);
+                    pilotAssistant.ActivePAPreset = p;
+                    p.LoadPreset(pilotAssistant.Controllers);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
@@ -378,7 +361,7 @@ namespace PilotAssistant.UI
             bool showTarget = true,
             bool doublesided = true)
         {
-            PID.PID_Controller controller = PilotAssistant.Instance.GetController(controllerID);
+            PID.PID_Controller controller = pilotAssistant.GetController(controllerID);
             string buttonText = string.Format("{0}: {1}{2}",
                                               inputName,
                                               inputValue.ToString("F" + displayPrecision),

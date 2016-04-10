@@ -7,15 +7,9 @@ namespace PilotAssistant.UI
     using Presets;
     using Utility;
 
-    [KSPAddon(KSPAddon.Startup.Flight, false)]
-    public class SASMainWindow : MonoBehaviour
+    public class SASMainWindow
     {
-        // Singleton pattern, as opposed to using semi-static classes
-        private static SASMainWindow instance;
-        public static SASMainWindow Instance
-        {
-            get { return instance; }
-        }
+        private SurfSAS surfSAS;
 
         private Rect windowRect = new Rect(350, 50, 200, 30);
         private Rect presetWindowRect = new Rect(550, 50, 50, 50);
@@ -25,50 +19,38 @@ namespace PilotAssistant.UI
         private bool showPresets = false;
 
         // Array describing the visibility of the various stock SAS PID controller values
-        private bool[] stockPidDisplay;
+        private bool[] stockPidDisplay = new bool[Enum.GetNames(typeof(SASList)).Length];
         // Similar to "stockPidDisplay" but for surface SAS controllers
-        private bool[] ssasPidDisplay;
+        private bool[] ssasPidDisplay = new bool[Enum.GetNames(typeof(SASList)).Length];
         private string newPresetName = "";
 
         private const int WINDOW_ID = 78934856;
         private const int PRESET_WINDOW_ID = 78934857;
 
-        private void Awake()
+        public SASMainWindow(SurfSAS surfSAS)
         {
-            instance = this;
-            stockPidDisplay = new bool[Enum.GetNames(typeof(SASList)).Length];
-            ssasPidDisplay = new bool[Enum.GetNames(typeof(SASList)).Length];
+            this.surfSAS = surfSAS;
         }
 
-        private void Start()
-        {
-            RenderingManager.AddToPostDrawQueue(5, DrawGUI);
-        }
-
-        private void OnDestroy()
-        {
-            RenderingManager.RemoveFromPostDrawQueue(5, DrawGUI);
-        }
-
-        private void DrawGUI()
+        public void OnGUI()
         {
             GUI.skin = GeneralUI.Skin;
-            if (SurfSAS.Instance.IsSSASMode)
+            if (surfSAS.IsSSASMode)
             {
                 Color oldColor = GUI.backgroundColor;
-                if (SurfSAS.Instance.IsSSASOperational)
+                if (surfSAS.IsSSASOperational)
                     GUI.backgroundColor = GeneralUI.SSASActiveBGColor;
                 else
                     GUI.backgroundColor = GeneralUI.SSASInactiveBGColor;
 
                 if (GUI.Button(new Rect(Screen.width / 2 + 50, Screen.height - 200, 50, 30), "SSAS"))
                 {
-                    SurfSAS.Instance.ToggleOperational();
+                    surfSAS.ToggleOperational();
                 }
                 GUI.backgroundColor = oldColor;
             }
 
-            if (isVisible)
+            if (AppLauncherFlight.ShowSAS)
             {
                 windowRect = GUILayout.Window(WINDOW_ID, windowRect, DrawSASWindow, "SAS Module", GUILayout.Width(0),
                                               GUILayout.Height(0));
@@ -91,8 +73,8 @@ namespace PilotAssistant.UI
 
         private void DrawSASWindow(int windowId)
         {
-            bool isOperational = SurfSAS.Instance.IsSSASOperational || SurfSAS.Instance.IsStockSASOperational;
-            bool isSSASMode = SurfSAS.Instance.IsSSASMode;
+            bool isOperational = surfSAS.IsSSASOperational || surfSAS.IsStockSASOperational;
+            bool isSSASMode = surfSAS.IsSSASMode;
             GUILayout.BeginHorizontal();
             showPresets = GUILayout.Toggle(showPresets, "Presets", GeneralUI.Style(UIStyle.ToggleButton));
             GUILayout.EndHorizontal();
@@ -103,7 +85,7 @@ namespace PilotAssistant.UI
             if (GUILayout.Toggle(isOperational, isOperational ? "On" : "Off", GeneralUI.Style(UIStyle.ToggleButton),
                                  GUILayout.ExpandWidth(false)) != isOperational)
             {
-                SurfSAS.Instance.ToggleOperational();
+                surfSAS.ToggleOperational();
             }
             GUILayout.Label("SAS", GeneralUI.Style(UIStyle.BoldLabel), GUILayout.ExpandWidth(true));
             GUILayout.EndHorizontal();
@@ -113,28 +95,28 @@ namespace PilotAssistant.UI
             bool tmpToggle2 = GUILayout.Toggle(isSSASMode, "SSAS", GeneralUI.Style(UIStyle.ToggleButton));
             // tmpToggle1 and tmpToggle2 are true when the user clicks the non-active mode, i.e. the mode changes.
             if (tmpToggle1 && tmpToggle2)
-                SurfSAS.Instance.ToggleSSASMode();
+                surfSAS.ToggleSSASMode();
 
             GUILayout.EndHorizontal();
 
             if (isSSASMode)
             {
-                double pitch = SurfSAS.Instance.GetController(SASList.Pitch).SetPoint;
-                double roll = SurfSAS.Instance.GetController(SASList.Roll).SetPoint;
-                double hdg = SurfSAS.Instance.GetController(SASList.Yaw).SetPoint;
+                double pitch = surfSAS.GetController(SASList.Pitch).SetPoint;
+                double roll = surfSAS.GetController(SASList.Roll).SetPoint;
+                double hdg = surfSAS.GetController(SASList.Yaw).SetPoint;
 
-                bool tmp1 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Pitch);
-                bool tmp2 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Roll);
-                bool tmp3 = SurfSAS.Instance.IsSSASAxisEnabled(SASList.Yaw);
-                SurfSAS.Instance.GetController(SASList.Pitch).SetPoint
+                bool tmp1 = surfSAS.IsSSASAxisEnabled(SASList.Pitch);
+                bool tmp2 = surfSAS.IsSSASAxisEnabled(SASList.Roll);
+                bool tmp3 = surfSAS.IsSSASAxisEnabled(SASList.Yaw);
+                surfSAS.GetController(SASList.Pitch).SetPoint
                     = GeneralUI.TogPlusNumBox(windowId, "Pitch:", ref tmp1, pitch, 80, 60, 80, -80);
-                SurfSAS.Instance.GetController(SASList.Roll).SetPoint
+                surfSAS.GetController(SASList.Roll).SetPoint
                     = GeneralUI.TogPlusNumBox(windowId, "Roll:", ref tmp2, roll, 80, 60, 180, -180);
-                SurfSAS.Instance.GetController(SASList.Yaw).SetPoint
+                surfSAS.GetController(SASList.Yaw).SetPoint
                     = GeneralUI.TogPlusNumBox(windowId, "Heading:", ref tmp3, hdg, 80, 60, 360, 0);
-                SurfSAS.Instance.SetSSASAxisEnabled(SASList.Pitch, tmp1);
-                SurfSAS.Instance.SetSSASAxisEnabled(SASList.Roll, tmp2);
-                SurfSAS.Instance.SetSSASAxisEnabled(SASList.Yaw, tmp3);
+                surfSAS.SetSSASAxisEnabled(SASList.Pitch, tmp1);
+                surfSAS.SetSSASAxisEnabled(SASList.Roll, tmp2);
+                surfSAS.SetSSASAxisEnabled(SASList.Yaw, tmp3);
 
                 DrawPIDValues(windowId, SASList.Pitch, "Pitch");
                 DrawPIDValues(windowId, SASList.Roll, "Roll");
@@ -142,7 +124,7 @@ namespace PilotAssistant.UI
             }
             else
             {
-                FlightData flightData = SurfSAS.Instance.FlightData;
+                FlightData flightData = surfSAS.FlightData;
                 VesselAutopilot.VesselSAS sas = flightData.Vessel.Autopilot.SAS;
 
                 DrawPIDValues(windowId, sas.pidLockedPitch, "Pitch", SASList.Pitch);
@@ -159,7 +141,7 @@ namespace PilotAssistant.UI
 
         private void DrawPresetWindow(int windowId)
         {
-            if (SurfSAS.Instance.IsSSASMode)
+            if (surfSAS.IsSSASMode)
                 DrawSSASPreset(windowId);
             else
                 DrawStockPreset(windowId);
@@ -167,15 +149,15 @@ namespace PilotAssistant.UI
 
         private void DrawSSASPreset(int windowId)
         {
-            if (SurfSAS.Instance.ActiveSSASPreset != null)
+            if (surfSAS.ActiveSSASPreset != null)
             {
-                SASPreset p = SurfSAS.Instance.ActiveSSASPreset;
+                SASPreset p = surfSAS.ActiveSSASPreset;
                 GUILayout.Label(string.Format("Active Preset: {0}", p.Name), GeneralUI.Style(UIStyle.BoldLabel));
-                if (p != SurfSAS.Instance.DefaultSSASPreset)
+                if (p != surfSAS.DefaultSSASPreset)
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        p.Update(SurfSAS.Instance.Controllers);
+                        p.Update(surfSAS.Controllers);
                         PresetManager.Instance.SavePresetsToFile();
                         GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
                     }
@@ -191,12 +173,12 @@ namespace PilotAssistant.UI
                 // Disallow these names to reduce confusion
                 if (newPresetName.ToLower() != "default" &&
                     newPresetName.ToLower() != "stock")
-                    p = PresetManager.Instance.RegisterSSASPreset(newPresetName, SurfSAS.Instance.Controllers);
+                    p = PresetManager.Instance.RegisterSSASPreset(newPresetName, surfSAS.Controllers);
                 else
                     GeneralUI.PostMessage("The preset name \"" + newPresetName + "\" is not allowed");
                 if (p != null)
                 {
-                    SurfSAS.Instance.ActiveSSASPreset = p;
+                    surfSAS.ActiveSSASPreset = p;
                     newPresetName = "";
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" added");
                 }
@@ -208,9 +190,9 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Default"))
             {
-                SASPreset p = SurfSAS.Instance.DefaultSSASPreset;
-                SurfSAS.Instance.ActiveSSASPreset = p;
-                p.LoadPreset(SurfSAS.Instance.Controllers);
+                SASPreset p = surfSAS.DefaultSSASPreset;
+                surfSAS.ActiveSSASPreset = p;
+                p.LoadPreset(surfSAS.Controllers);
                 GeneralUI.PostMessage("Default SSAS preset loaded");
             }
 
@@ -220,8 +202,8 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.Name))
                 {
-                    SurfSAS.Instance.ActiveSSASPreset = p;
-                    p.LoadPreset(SurfSAS.Instance.Controllers);
+                    surfSAS.ActiveSSASPreset = p;
+                    p.LoadPreset(surfSAS.Controllers);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
@@ -239,15 +221,15 @@ namespace PilotAssistant.UI
 
         private void DrawStockPreset(int windowId)
         {
-            if (SurfSAS.Instance.ActiveStockPreset != null)
+            if (surfSAS.ActiveStockPreset != null)
             {
-                SASPreset p = SurfSAS.Instance.ActiveStockPreset;
+                SASPreset p = surfSAS.ActiveStockPreset;
                 GUILayout.Label(string.Format("Active Preset: {0}", p.Name), GeneralUI.Style(UIStyle.BoldLabel));
-                if (p != SurfSAS.Instance.DefaultStockPreset)
+                if (p != surfSAS.DefaultStockPreset)
                 {
                     if (GUILayout.Button("Update Preset"))
                     {
-                        p.UpdateStock(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                        p.UpdateStock(surfSAS.FlightData.Vessel.Autopilot.SAS);
                         PresetManager.Instance.SavePresetsToFile();
                         GeneralUI.PostMessage("Preset \"" + p.Name + "\" updated");
                     }
@@ -264,12 +246,12 @@ namespace PilotAssistant.UI
                 if (newPresetName.ToLower() != "default" &&
                     newPresetName.ToLower() != "stock")
                     p = PresetManager.Instance.RegisterStockSASPreset(
-                        newPresetName, SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                        newPresetName, surfSAS.FlightData.Vessel.Autopilot.SAS);
                 else
                     GeneralUI.PostMessage("The preset name \"" + newPresetName + "\" is not allowed");
                 if (p != null)
                 {
-                    SurfSAS.Instance.ActiveStockPreset = p;
+                    surfSAS.ActiveStockPreset = p;
                     newPresetName = "";
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" added");
                 }
@@ -281,9 +263,9 @@ namespace PilotAssistant.UI
 
             if (GUILayout.Button("Stock"))
             {
-                SASPreset p = SurfSAS.Instance.DefaultStockPreset;
-                SurfSAS.Instance.ActiveStockPreset = p;
-                p.LoadStockPreset(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                SASPreset p = surfSAS.DefaultStockPreset;
+                surfSAS.ActiveStockPreset = p;
+                p.LoadStockPreset(surfSAS.FlightData.Vessel.Autopilot.SAS);
                 GeneralUI.PostMessage("Default stock preset loaded");
             }
 
@@ -293,8 +275,8 @@ namespace PilotAssistant.UI
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button(p.Name))
                 {
-                    SurfSAS.Instance.ActiveStockPreset = p;
-                    p.LoadStockPreset(SurfSAS.Instance.FlightData.Vessel.Autopilot.SAS);
+                    surfSAS.ActiveStockPreset = p;
+                    p.LoadStockPreset(surfSAS.FlightData.Vessel.Autopilot.SAS);
                     GeneralUI.PostMessage("Preset \"" + p.Name + "\" loaded");
                 }
                 if (GUILayout.Button("x", GUILayout.Width(25)))
@@ -312,7 +294,7 @@ namespace PilotAssistant.UI
 
         private void DrawPIDValues(int windowId, SASList controllerID, string inputName)
         {
-            PID.PID_Controller controller = SurfSAS.Instance.GetController(controllerID);
+            PID.PID_Controller controller = surfSAS.GetController(controllerID);
             if (GUILayout.Button(inputName, GUILayout.ExpandWidth(true)))
                 ssasPidDisplay[(int)controllerID] = !ssasPidDisplay[(int)controllerID];
 

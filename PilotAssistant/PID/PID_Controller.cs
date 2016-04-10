@@ -33,7 +33,7 @@ namespace PilotAssistant.PID
         {
             if (activeSetpoint != targetSetpoint)
             {
-                // Ease in quadratic fasion
+                // Ease in quadratic fashion
                 increment += tun.Easing * TimeWarp.fixedDeltaTime * 0.01;
                 if (activeSetpoint < targetSetpoint)
                     activeSetpoint = Math.Min(activeSetpoint + increment, targetSetpoint);
